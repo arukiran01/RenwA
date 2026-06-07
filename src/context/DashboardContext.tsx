@@ -369,7 +369,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Operational audit log tracked.');
 
-        addToast(`Registered ${app.name} as a Change Maker! Form committed to Supabase.`, 'success');
+        addToast(`Welcome aboard, ${app.name}! You have registered successfully as a Change Maker.`, 'success');
         await refreshAll();
         return;
       } catch (err) {
@@ -397,7 +397,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       },
       ...prev
     ]);
-    addToast(`Registered ${app.name} as a Change Maker locally!`, 'success');
+    addToast(`Welcome aboard, ${app.name}! You have registered successfully as a Change Maker.`, 'success');
   };
 
   const submitInitiative = async (init: Omit<InitiativeApplication, 'id' | 'createdAt'>) => {
@@ -451,7 +451,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Ecological registration audit log logged.');
 
-        addToast(`Registered ecological initiative "${init.name}" successfully!`, 'success');
+        addToast(`New ecological site "${init.name}" has been successfully registered!`, 'success');
         await refreshAll();
         return;
       } catch (err) {
@@ -480,7 +480,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       },
       ...prev
     ]);
-    addToast(`Registered ecological initiative "${init.name}" locally!`, 'success');
+    addToast(`New ecological site "${init.name}" has been successfully registered!`, 'success');
   };
 
   const updateMetrics = async (kg: number, action: 'add' | 'reduce' | 'set' | 'reset' | 'set_both', targetKg?: number) => {
@@ -539,7 +539,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Metrics change audit log successfully synced.');
 
-        addToast(`Metrics modified systematically via Console!`, 'success');
+        addToast(`Environmental impact metrics updated successfully!`, 'success');
         await refreshAll();
         return;
       } catch (err) {
@@ -563,7 +563,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       },
       ...prev
     ]);
-    addToast(`Metrics modified via Local Storage!`, 'success');
+    addToast(`Environmental impact metrics updated successfully!`, 'success');
   };
 
   return (
@@ -592,34 +592,34 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               switch (type) {
                 case 'error':
                   return {
-                    icon: <AlertCircle className="w-4 h-4 text-rose-450" />,
+                    icon: <AlertCircle className="w-[18px] h-[18px] text-rose-400" />,
                     bgColor: 'bg-rose-500/10',
-                    borderColor: 'border-rose-500/25',
+                    borderColor: 'border-rose-500/30',
                     textColor: 'text-rose-400',
-                    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/20',
-                    title: 'System Alert',
-                    shadow: 'shadow-[0_8px_30px_rgb(244,63,94,0.15)]'
+                    badge: 'bg-rose-500/20 text-rose-300 border-rose-500/35',
+                    title: 'Alert',
+                    shadow: 'shadow-[0_8px_32px_rgba(244,63,94,0.2)]'
                   };
                 case 'info':
                   return {
-                    icon: <Info className="w-4 h-4 text-sky-450" />,
+                    icon: <Info className="w-[18px] h-[18px] text-sky-400" />,
                     bgColor: 'bg-sky-500/10',
-                    borderColor: 'border-sky-500/25',
+                    borderColor: 'border-sky-500/30',
                     textColor: 'text-sky-400',
-                    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/20',
-                    title: 'Telemetry Event',
-                    shadow: 'shadow-[0_8px_30px_rgb(56,189,248,0.15)]'
+                    badge: 'bg-sky-500/20 text-sky-300 border-sky-500/35',
+                    title: 'Notification',
+                    shadow: 'shadow-[0_8px_32px_rgba(14,165,233,0.2)]'
                   };
                 case 'success':
                 default:
                   return {
-                    icon: <CheckCircle2 className="w-4 h-4 text-emerald-450" />,
+                    icon: <CheckCircle2 className="w-[18px] h-[18px] text-emerald-400" />,
                     bgColor: 'bg-emerald-500/10',
-                    borderColor: 'border-emerald-500/25',
+                    borderColor: 'border-emerald-500/30',
                     textColor: 'text-emerald-400',
-                    badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
-                    title: 'Operation Confirmed',
-                    shadow: 'shadow-[0_8px_30px_rgb(16,185,129,0.15)]'
+                    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/35',
+                    title: 'Success',
+                    shadow: 'shadow-[0_8px_32px_rgba(16,185,129,0.2)]'
                   };
               }
             };
