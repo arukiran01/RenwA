@@ -128,7 +128,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!hasSupabaseConfig || !supabase) return;
     try {
       const { data, error } = await supabase
-        .from('metrics')
+        .from('impact_metrics')
         .select('*')
         .eq('id', 'system_metrics')
         .maybeSingle();
@@ -145,7 +145,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } else {
         // Seed the system_metrics row if empty
         await supabase
-          .from('metrics')
+          .from('impact_metrics')
           .insert({
             id: 'system_metrics',
             currentKg: DEFAULT_METRICS.currentKg,
@@ -162,6 +162,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const fetchVolunteers = async () => {
     if (!hasSupabaseConfig || !supabase) return;
+
+    // Guard on admin authentication locally to avoid wiping mock lists
+    const isLocalAuth = localStorage.getItem('renewa_admin_auth') === 'true';
+    if (!isLocalAuth) return;
+
     try {
       const { data, error } = await supabase
         .from('volunteers')
@@ -189,6 +194,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const fetchInitiatives = async () => {
     if (!hasSupabaseConfig || !supabase) return;
+
+    // Guard on admin authentication locally to avoid wiping mock lists
+    const isLocalAuth = localStorage.getItem('renewa_admin_auth') === 'true';
+    if (!isLocalAuth) return;
+
     try {
       const { data, error } = await supabase
         .from('initiatives')
@@ -319,36 +329,41 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         if (error) throw error;
 
-        // Update indicator stats in Supabase
-        const updatedVolunteersCount = metrics.volunteersCount + 1;
-        await supabase
-          .from('metrics')
-          .upsert({
-            id: 'system_metrics',
-            currentKg: metrics.currentKg,
-            targetKg: metrics.targetKg,
-            volunteersCount: updatedVolunteersCount,
-            eventsCount: metrics.eventsCount,
-            communitiesCount: metrics.communitiesCount
-          });
+        // Gracefully attempt metrics update (might fail due to RLS if anonymous guest)
+        try {
+          const updatedVolunteersCount = metrics.volunteersCount + 1;
+          await supabase
+            .from('impact_metrics')
+            .upsert({
+              id: 'system_metrics',
+              currentKg: metrics.currentKg,
+              targetKg: metrics.targetKg,
+              volunteersCount: updatedVolunteersCount,
+              eventsCount: metrics.eventsCount,
+              communitiesCount: metrics.communitiesCount
+            });
+        } catch (metricsErr) {
+          console.warn('[SUPABASE METRICS UPSERT SKIPPED/FAILED]', metricsErr);
+        }
 
-        // Append log
-        await supabase
-          .from('logs')
-          .insert({
-            type: 'new_volunteer',
-            description: `${app.name} registered as an active Volunteer Change Maker.`,
-            timestamp: timestampStr
-          });
-
-        addToast(`Welcome aboard, ${app.name}! You have registered successfully as a Change Maker.`, 'success');
-        return;
+        // Gracefully attempt to append log
+        try {
+          await supabase
+            .from('logs')
+            .insert({
+              type: 'new_volunteer',
+              description: `${app.name} registered as an active Volunteer Change Maker.`,
+              timestamp: timestampStr
+            });
+        } catch (logErr) {
+          console.warn('[SUPABASE LOG INSERT SKIPPED/FAILED]', logErr);
+        }
       } catch (err) {
-        console.error('[SUPABASE SUBMIT VOLUNTEER EXCEPTION] Falling back to local storage sync.', err);
+        console.error('[SUPABASE SUBMIT VOLUNTEER EXCEPTION]', err);
       }
     }
 
-    // High integrity Local Storage Sync Fallback
+    // High integrity Local Storage & React State update (ALWAYS run for seamless instantaneous UX)
     const newVol: VolunteerApplication = {
       id: mockId,
       ...app,
@@ -391,37 +406,42 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         if (error) throw error;
 
-        // Update metrics indicators stats in Supabase using upsert
-        const updatedEventsCount = metrics.eventsCount + 2;
-        const updatedCommunitiesCount = metrics.communitiesCount + 1;
-        await supabase
-          .from('metrics')
-          .upsert({ 
-            id: 'system_metrics',
-            currentKg: metrics.currentKg,
-            targetKg: metrics.targetKg,
-            volunteersCount: metrics.volunteersCount,
-            eventsCount: updatedEventsCount,
-            communitiesCount: updatedCommunitiesCount
-          });
+        // Gracefully attempt metrics update (might fail due to RLS if anonymous guest)
+        try {
+          const updatedEventsCount = metrics.eventsCount + 2;
+          const updatedCommunitiesCount = metrics.communitiesCount + 1;
+          await supabase
+            .from('impact_metrics')
+            .upsert({ 
+              id: 'system_metrics',
+              currentKg: metrics.currentKg,
+              targetKg: metrics.targetKg,
+              volunteersCount: metrics.volunteersCount,
+              eventsCount: updatedEventsCount,
+              communitiesCount: updatedCommunitiesCount
+            });
+        } catch (metricsErr) {
+          console.warn('[SUPABASE METRICS UPSERT SKIPPED/FAILED]', metricsErr);
+        }
 
-        // Append log
-        await supabase
-          .from('logs')
-          .insert({
-            type: 'new_initiative',
-            description: `New ecological initiative site registered: "${init.name}" in ${init.city}.`,
-            timestamp: timestampStr
-          });
-
-        addToast(`New ecological site "${init.name}" has been successfully registered!`, 'success');
-        return;
+        // Gracefully attempt to append log
+        try {
+          await supabase
+            .from('logs')
+            .insert({
+              type: 'new_initiative',
+              description: `New ecological initiative site registered: "${init.name}" in ${init.city}.`,
+              timestamp: timestampStr
+            });
+        } catch (logErr) {
+          console.warn('[SUPABASE LOG INSERT SKIPPED/FAILED]', logErr);
+        }
       } catch (err) {
-        console.error('[SUPABASE SUBMIT INITIATIVE EXCEPTION] Falling back to local storage sync.', err);
+        console.error('[SUPABASE SUBMIT INITIATIVE EXCEPTION]', err);
       }
     }
 
-    // High integrity Local Storage Sync Fallback
+    // High integrity Local Storage & React State update (ALWAYS run for seamless instantaneous UX)
     const newInit: InitiativeApplication = {
       id: mockId,
       ...init,
@@ -476,7 +496,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (hasSupabaseConfig && supabase) {
       try {
         const { error } = await supabase
-          .from('metrics')
+          .from('impact_metrics')
           .upsert({
             id: 'system_metrics',
             currentKg: finalKg,
@@ -498,13 +518,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           });
 
         addToast(`Environmental impact metrics updated successfully!`, 'success');
-        return;
       } catch (err) {
         console.error('[SUPABASE METRICS UPDATE EXCEPTION] Falling back to local storage sync.', err);
       }
     }
 
-    // High integrity Local Storage Sync Fallback
+    // High integrity Local Storage Sync Fallback (ALWAYS run to prevent visual lag)
     setMetrics(prev => ({
       ...prev,
       currentKg: finalKg,
@@ -520,7 +539,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       },
       ...prev
     ]);
-    addToast(`Environmental impact metrics updated successfully!`, 'success');
   };
 
   return (
