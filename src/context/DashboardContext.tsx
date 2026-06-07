@@ -124,12 +124,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Load database metrics real-time
   const fetchMetrics = async () => {
     if (!hasSupabaseConfig || !supabase) return;
     try {
       const { data, error } = await supabase
-        .from('impact_metrics')
+        .from('metrics')
         .select('*')
         .eq('id', 'system_metrics')
         .maybeSingle();
@@ -137,18 +136,17 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (error) throw error;
       if (data) {
         setMetrics({
-          currentKg: data.currentKg,
-          targetKg: data.targetKg,
-          volunteersCount: data.volunteersCount,
-          eventsCount: data.eventsCount,
-          communitiesCount: data.communitiesCount
+          currentKg: Number(data.currentKg ?? DEFAULT_METRICS.currentKg),
+          targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
+          volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
+          eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
+          communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
         });
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Sourced real-time performance indicators metrics.');
       } else {
-        // Seed the system_metrics row if empty using upsert for safety
-        const { error: seedError } = await supabase
-          .from('impact_metrics')
-          .upsert({
+        // Seed the system_metrics row if empty
+        await supabase
+          .from('metrics')
+          .insert({
             id: 'system_metrics',
             currentKg: DEFAULT_METRICS.currentKg,
             targetKg: DEFAULT_METRICS.targetKg,
@@ -156,12 +154,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             eventsCount: DEFAULT_METRICS.eventsCount,
             communitiesCount: DEFAULT_METRICS.communitiesCount
           });
-        if (!seedError) {
-          console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Seeded default environmental indicators row.');
-        }
       }
     } catch (err) {
-      console.warn('[SUPABASE FETCH METRICS DETAIL WARNING] Table impact_metrics might not exist or connection failed. Using local storage metrics.', err);
+      console.warn('[SUPABASE FETCH METRICS ERROR] Utilizing local state fallback.', err);
     }
   };
 
@@ -186,10 +181,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           message: v.message || '',
           createdAt: v.createdAt ? new Date(v.createdAt).toLocaleString() : ''
         })));
-        console.log(`[SUPABASE DATABASE TRANSACTION SUCCESS] Synced ${data.length} registered Change Makers successfully.`);
       }
     } catch (err) {
-      console.warn('[SUPABASE FETCH VOLUNTEERS WARNING] Table volunteers could not be fetched.', err);
+      console.warn('[SUPABASE FETCH VOLUNTEERS ERROR]', err);
     }
   };
 
@@ -213,10 +207,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           message: i.message || '',
           createdAt: i.createdAt ? new Date(i.createdAt).toLocaleString() : ''
         })));
-        console.log(`[SUPABASE DATABASE TRANSACTION SUCCESS] Loaded ${data.length} active initiatives successfully.`);
       }
     } catch (err) {
-      console.warn('[SUPABASE FETCH INITIATIVES WARNING] Table initiatives could not be fetched.', err);
+      console.warn('[SUPABASE FETCH INITIATIVES ERROR]', err);
     }
   };
 
@@ -226,82 +219,69 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const { data, error } = await supabase
         .from('logs')
         .select('*')
-        .order('id', { ascending: false });
+        .order('timestamp', { ascending: false });
 
       if (error) throw error;
       if (data) {
         setLogs(data);
-        console.log(`[SUPABASE DATABASE TRANSACTION SUCCESS] Sourced ${data.length} audit logs info.`);
       }
     } catch (err) {
-      console.warn('[SUPABASE FETCH LOGS WARNING] Table logs could not be fetched.', err);
+      console.warn('[SUPABASE FETCH LOGS ERROR]', err);
     }
   };
 
   const refreshAll = async () => {
     setIsLoading(true);
-    try {
+    if (hasSupabaseConfig && supabase) {
       await Promise.all([
         fetchMetrics(),
         fetchVolunteers(),
         fetchInitiatives(),
         fetchLogs()
       ]);
-      // Gentle ambient lock delay to show off beautiful skeletons smoothly
-      await new Promise(resolve => setTimeout(resolve, 800));
-    } catch (err) {
-      console.warn('[SUPABASE REFRESH EXCEPTION]', err);
-    } finally {
-      setIsLoading(false);
     }
+    // Gentle transition delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsLoading(false);
   };
 
-  // Real-time synchronization subscription using Supabase broadcast / changes
+  // Real-time synchronization subscription using Supabase Channel Snapshots
   useEffect(() => {
-    refreshAll();
+    if (!hasSupabaseConfig || !supabase) {
+      setIsLoading(false);
+      return;
+    }
 
-    if (!hasSupabaseConfig || !supabase) return;
+    setIsLoading(true);
 
-    // Real-time Supabase Table Channels Subscriptions
-    const subMetrics = supabase
-      .channel('metrics-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_metrics' }, () => {
+    const loadData = async () => {
+      await Promise.all([
+        fetchMetrics(),
+        fetchVolunteers(),
+        fetchInitiatives(),
+        fetchLogs()
+      ]);
+      setIsLoading(false);
+    };
+    loadData();
+
+    // Listen to changes recursively across schemas
+    const channel = supabase
+      .channel('schema-changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
         fetchMetrics();
-      })
-      .subscribe();
-
-    const subVolunteers = supabase
-      .channel('volunteers-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'volunteers' }, () => {
         fetchVolunteers();
-        fetchMetrics(); // metrics depends on volunteers count
-      })
-      .subscribe();
-
-    const subInitiatives = supabase
-      .channel('initiatives-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'initiatives' }, () => {
         fetchInitiatives();
-        fetchMetrics(); // metrics depends on initiatives count
-      })
-      .subscribe();
-
-    const subLogs = supabase
-      .channel('logs-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'logs' }, () => {
         fetchLogs();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(subMetrics);
-      supabase.removeChannel(subVolunteers);
-      supabase.removeChannel(subInitiatives);
-      supabase.removeChannel(subLogs);
+      supabase.removeChannel(channel);
     };
   }, []);
 
-  // Save changes back to LocalStorage
+  // Save changes back to LocalStorage as fallback key matching
   useEffect(() => {
     localStorage.setItem('renewa_metrics', JSON.stringify(metrics));
   }, [metrics]);
@@ -325,9 +305,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (hasSupabaseConfig && supabase) {
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('volunteers')
-          .insert([{
+          .insert({
             name: app.name,
             email: app.email,
             phone: app.phone,
@@ -335,18 +315,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             skills: app.skills,
             availability: app.availability,
             message: app.message
-          }])
-          .select()
-          .single();
+          });
 
         if (error) throw error;
 
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Volunteer profile committed successfully:', data);
-
-        // Update indicator stats in Supabase using upsert
+        // Update indicator stats in Supabase
         const updatedVolunteersCount = metrics.volunteersCount + 1;
         await supabase
-          .from('impact_metrics')
+          .from('metrics')
           .upsert({
             id: 'system_metrics',
             currentKg: metrics.currentKg,
@@ -356,28 +332,23 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             communitiesCount: metrics.communitiesCount
           });
 
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Environmental indicators updated count (+1 volunteer).');
-
         // Append log
         await supabase
           .from('logs')
-          .insert([{
+          .insert({
             type: 'new_volunteer',
             description: `${app.name} registered as an active Volunteer Change Maker.`,
             timestamp: timestampStr
-          }]);
-
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Operational audit log tracked.');
+          });
 
         addToast(`Welcome aboard, ${app.name}! You have registered successfully as a Change Maker.`, 'success');
-        await refreshAll();
         return;
       } catch (err) {
         console.error('[SUPABASE SUBMIT VOLUNTEER EXCEPTION] Falling back to local storage sync.', err);
       }
     }
 
-    // High integrity Local Storage Sync
+    // High integrity Local Storage Sync Fallback
     const newVol: VolunteerApplication = {
       id: mockId,
       ...app,
@@ -407,28 +378,24 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (hasSupabaseConfig && supabase) {
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('initiatives')
-          .insert([{
+          .insert({
             name: init.name,
             email: init.email,
             phone: init.phone,
             city: init.city,
             category: init.category,
             message: init.message
-          }])
-          .select()
-          .single();
+          });
 
         if (error) throw error;
-
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Ecological initiative committed successfully:', data);
 
         // Update metrics indicators stats in Supabase using upsert
         const updatedEventsCount = metrics.eventsCount + 2;
         const updatedCommunitiesCount = metrics.communitiesCount + 1;
         await supabase
-          .from('impact_metrics')
+          .from('metrics')
           .upsert({ 
             id: 'system_metrics',
             currentKg: metrics.currentKg,
@@ -438,28 +405,23 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             communitiesCount: updatedCommunitiesCount
           });
 
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Environmental indicators updated stats (+2 events, +1 community).');
-
         // Append log
         await supabase
           .from('logs')
-          .insert([{
+          .insert({
             type: 'new_initiative',
             description: `New ecological initiative site registered: "${init.name}" in ${init.city}.`,
             timestamp: timestampStr
-          }]);
-
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Ecological registration audit log logged.');
+          });
 
         addToast(`New ecological site "${init.name}" has been successfully registered!`, 'success');
-        await refreshAll();
         return;
       } catch (err) {
         console.error('[SUPABASE SUBMIT INITIATIVE EXCEPTION] Falling back to local storage sync.', err);
       }
     }
 
-    // High integrity Local Storage Sync
+    // High integrity Local Storage Sync Fallback
     const newInit: InitiativeApplication = {
       id: mockId,
       ...init,
@@ -514,7 +476,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (hasSupabaseConfig && supabase) {
       try {
         const { error } = await supabase
-          .from('impact_metrics')
+          .from('metrics')
           .upsert({
             id: 'system_metrics',
             currentKg: finalKg,
@@ -526,28 +488,23 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         if (error) throw error;
 
-        console.log(`[SUPABASE DATABASE TRANSACTION SUCCESS] Updated target progress limits to ${finalKg} KG.`);
-
         await supabase
           .from('logs')
-          .insert([{
+          .insert({
             type: 'waste_update',
             description: `Metrics updated via Console. Action: ${action.toUpperCase()}`,
             value: `${finalKg} / ${finalTarget} KG`,
             timestamp: timestampStr
-          }]);
-
-        console.log('[SUPABASE DATABASE TRANSACTION SUCCESS] Metrics change audit log successfully synced.');
+          });
 
         addToast(`Environmental impact metrics updated successfully!`, 'success');
-        await refreshAll();
         return;
       } catch (err) {
         console.error('[SUPABASE METRICS UPDATE EXCEPTION] Falling back to local storage sync.', err);
       }
     }
 
-    // High integrity Local Storage Sync
+    // High integrity Local Storage Sync Fallback
     setMetrics(prev => ({
       ...prev,
       currentKg: finalKg,
@@ -639,7 +596,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
-                    <span className={`text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded border ${styles.badge}`}>
+                     <span className={`text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded border ${styles.badge}`}>
                       {styles.title}
                     </span>
                   </div>
@@ -667,3 +624,4 @@ export const useDashboard = () => {
   }
   return context;
 };
+

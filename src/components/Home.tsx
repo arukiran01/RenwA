@@ -60,6 +60,70 @@ const carouselImages = [
   }
 ];
 
+// Detailed animated helper for real-time numerical counters
+function AnimatedCounter({ value, duration = 1200 }: { value: number; duration?: number }) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const previousValueRef = useRef(value);
+
+  useEffect(() => {
+    const start = previousValueRef.current;
+    const end = value;
+    if (start === end) return;
+
+    previousValueRef.current = value;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // cubic-bezier(0.16, 1, 0.3, 1) easeOutExpo style progression
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = Math.round(start + (end - start) * ease);
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [value, duration]);
+
+  return <>{displayValue.toLocaleString()}</>;
+}
+
+// Detailed animated helper for real-time percentages
+function AnimatedPercentage({ value, duration = 1200 }: { value: number; duration?: number }) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const previousValueRef = useRef(value);
+
+  useEffect(() => {
+    const start = previousValueRef.current;
+    const end = value;
+    if (start === end) return;
+
+    previousValueRef.current = value;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // cubic-bezier(0.16, 1, 0.3, 1) easeOutExpo style progression
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = start + (end - start) * ease;
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [value, duration]);
+
+  return <>{displayValue.toFixed(1)}%</>;
+}
+
 export default function Home() {
   const { setActivePage } = useApp();
   const { metrics } = useDashboard();
@@ -450,7 +514,7 @@ export default function Home() {
               <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase block mb-1">Current Collection</span>
               <div className="flex items-baseline justify-center md:justify-start space-x-2">
                 <span className="text-4xl md:text-5xl font-black font-heading text-green-400">
-                  {metrics.currentKg.toLocaleString()}
+                  <AnimatedCounter value={metrics.currentKg} />
                 </span>
                 <span className="text-lg font-bold text-slate-500">KG</span>
               </div>
@@ -464,17 +528,23 @@ export default function Home() {
               <div>
                 <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase block mb-1">Target Progress</span>
                 <span className="text-4xl md:text-5xl font-black font-heading text-sky-400 block">
-                  {percentage.toFixed(1)}%
+                  <AnimatedPercentage value={percentage} />
                 </span>
               </div>
-              <div className="w-full bg-slate-950 rounded-full h-2 mt-4 overflow-hidden border border-white/5">
+              <div className="w-full bg-slate-950 rounded-full h-2 mt-4 overflow-hidden border border-white/5 relative">
                 <motion.div
-                  className="bg-sky-400 h-full rounded-full"
+                  className="bg-gradient-to-r from-sky-500 to-indigo-400 h-full rounded-full relative"
                   initial={{ width: 0 }}
-                  whileInView={{ width: `${percentage}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                />
+                  animate={{ width: `${percentage}%` }}
+                  transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {/* Glowing dynamic tip indicator */}
+                  <motion.div 
+                    className="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[2px] rounded-full"
+                    animate={{ opacity: [0.4, 0.9, 0.4] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                </motion.div>
               </div>
             </div>
 
@@ -482,7 +552,7 @@ export default function Home() {
               <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase block mb-1">Current Initiative Target</span>
               <div className="flex items-baseline justify-center md:justify-start space-x-2">
                 <span className="text-4xl md:text-5xl font-black font-heading text-white">
-                  {metrics.targetKg.toLocaleString()}
+                  <AnimatedCounter value={metrics.targetKg} />
                 </span>
                 <span className="text-lg font-bold text-slate-500">KG</span>
               </div>
@@ -500,7 +570,7 @@ export default function Home() {
                 <Sparkles className="w-3.5 h-3.5 animate-spin" />
                 <span>TARGET MILESTONE CORRIDOR</span>
               </span>
-              <span>{metrics.targetKg.toLocaleString()} KG</span>
+              <span><AnimatedCounter value={metrics.targetKg} /> KG</span>
             </div>
 
             {/* Tracker Track & Milestone Bullets */}
@@ -512,12 +582,18 @@ export default function Home() {
               {/* Green filled active progress track */}
               <motion.div
                 id="active_progress_track"
-                className="absolute top-1/2 left-0 h-2 bg-gradient-to-r from-green-500 via-emerald-500 to-green-400 rounded-full -translate-y-1/2 shadow-[0_0_12px_rgba(34,197,94,0.4)]"
+                className="absolute top-1/2 left-0 h-2 bg-gradient-to-r from-green-400 via-emerald-500 to-emerald-400 rounded-full -translate-y-1/2 shadow-[0_0_15px_rgba(52,211,153,0.6)]"
                 initial={{ width: 0 }}
-                whileInView={{ width: `${percentage}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
+                animate={{ width: `${percentage}%` }}
+                transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {/* Visual glow element sliding right on top of the progressive tracker */}
+                <motion.div 
+                  className="absolute right-0 top-0 bottom-0 w-3 bg-white blur-[3px] rounded-full"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                />
+              </motion.div>
 
               {/* Milestone Pulse nodes along the track */}
               <div className="absolute inset-0 flex items-center justify-between pointer-events-none select-none">
