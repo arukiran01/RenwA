@@ -35,12 +35,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (password === 'admin' || password === 'renewa2026') {
       if (hasSupabaseConfig && supabase) {
         try {
-          const { error } = await supabase.auth.signInWithPassword({
+          const credentials = {
             email: 'admin@renewa.org',
             password: password === 'admin' ? 'adminPasscode123' : password
-          });
+          };
+          const { error } = await supabase.auth.signInWithPassword(credentials);
+          
           if (error) {
-            console.warn('[SUPABASE AUTH WARNING] Standard credentials catalog search bypass, logging in locally.');
+            console.warn('[SUPABASE AUTH WARNING] Standard credentials bypass, attempting auto signUp:', error.message);
+            // Auto provision standard admin credentials if it doesn't exist
+            const { error: signUpError } = await supabase.auth.signUp(credentials);
+            if (signUpError) {
+              console.warn('[SUPABASE AUTO REGISTER FAILED] User could not be created/verified:', signUpError.message);
+            } else {
+              console.log('[SUPABASE AUTO REGISTER SUCCESS] Created admin@renewa.org in Auth.');
+            }
+          } else {
+            console.log('[SUPABASE AUTH SUCCESS] Logged in as admin@renewa.org.');
           }
         } catch (e) {
           console.warn('[SUPABASE AUTH WARNING] Supabase database auth fallback to Local state:', e);

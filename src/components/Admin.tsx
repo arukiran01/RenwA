@@ -55,6 +55,8 @@ export default function Admin() {
     initiatives,
     logs,
     updateMetrics,
+    updateVolunteerStatus,
+    seedMockData,
     isLoading
   } = useDashboard();
 
@@ -131,24 +133,42 @@ export default function Admin() {
 
   const percentage = Math.min((metrics.currentKg / metrics.targetKg) * 100, 100);
 
-  // Synchronized datasets for dynamic analytical telemetry charts
-  const monthlyRecyclingData = [
-    { month: 'Jan', recycled: 4800, target: metrics.targetKg },
-    { month: 'Feb', recycled: 5600, target: metrics.targetKg },
-    { month: 'Mar', recycled: 6200, target: metrics.targetKg },
-    { month: 'Apr', recycled: 7400, target: metrics.targetKg },
-    { month: 'May', recycled: 8700, target: metrics.targetKg },
-    { month: 'Jun', recycled: Math.round(metrics.currentKg), target: metrics.targetKg },
-  ];
+  // Dynamic Real-Time Calculations of Registered Candidates
+  const roleChartData = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (volunteers && volunteers.length > 0) {
+      volunteers.forEach(v => {
+        const role = v.appliedRole || 'General Circularity Advocate';
+        counts[role] = (counts[role] || 0) + 1;
+      });
+    } else {
+      counts['Coastal Cleanup Crew'] = 0;
+      counts['E-waste Logistics Driver'] = 0;
+      counts['School Eco-Advocacy Teacher'] = 0;
+    }
+    return Object.entries(counts).map(([role, count]) => ({
+      name: role.replace('Volunteer ', '').replace('Advocacy ', '').trim(),
+      count
+    }));
+  }, [volunteers]);
 
-  const volunteerGrowthData = [
-    { month: 'Jan', volunteers: 340 },
-    { month: 'Feb', volunteers: 390 },
-    { month: 'Mar', volunteers: 435 },
-    { month: 'Apr', volunteers: 470 },
-    { month: 'May', volunteers: 512 },
-    { month: 'Jun', volunteers: volunteers.length + 524 },
-  ];
+  const cityChartData = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (volunteers && volunteers.length > 0) {
+      volunteers.forEach(v => {
+        const city = v.city || 'Seattle';
+        counts[city] = (counts[city] || 0) + 1;
+      });
+    } else {
+      counts['San Diego'] = 0;
+      counts['Seattle'] = 0;
+      counts['Boston'] = 0;
+    }
+    return Object.entries(counts).map(([city, count]) => ({
+      name: city.split(',')[0],
+      count
+    }));
+  }, [volunteers]);
 
   const handleAction = (action: 'add' | 'reduce' | 'set' | 'reset') => {
     const value = parseFloat(inputVal);
@@ -205,7 +225,15 @@ export default function Admin() {
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center flex-wrap gap-3">
+            <button
+              onClick={seedMockData}
+              className="px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center space-x-1 shrink-0"
+              title="Populates high-fidelity candidates, metrics, logs, and interactive profiles instantly."
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>Seed Telemetry Environment</span>
+            </button>
             <button
               onClick={() => setActivePage('home')}
               className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/5 rounded-xl text-xs font-semibold uppercase tracking-wider"
@@ -300,76 +328,79 @@ export default function Admin() {
 
         {/* RECHARTS ECO-ANALYTICS SYSTEM */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* CHART 1: MONTHLY RECYCLING PROGRESS */}
+          {/* CHART 1: CANDIDATES DISTRIBUTIONS BY PATH */}
           <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h3 className="text-base font-bold font-heading text-white">Monthly Diversion Trends</h3>
-                <p className="text-[11px] text-slate-400">Comparing active recycling volume against targeted threshold (KG).</p>
+              <div className="space-y-0.5 text-left">
+                <h3 className="text-sm font-bold font-heading text-white">Candidates by Applied Path</h3>
+                <p className="text-[10px] text-slate-400">Total registered applications classified by selected role requirements.</p>
               </div>
               <div className="text-right">
-                <span className="text-[10px] bg-green-500/15 text-green-400 px-2.5 py-1 rounded-full border border-green-500/10 uppercase tracking-widest font-mono font-bold">
-                  {metrics.currentKg.toLocaleString()} KG Active
+                <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full border border-green-500/10 uppercase font-mono font-bold">
+                  {volunteers.length} Raw Files
                 </span>
               </div>
             </div>
             
             <div className="h-64 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyRecyclingData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRecycled" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorTarget" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#020617', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '11px' }} 
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Area type="monotone" name="Recycled Volume (KG)" dataKey="recycled" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorRecycled)" />
-                  <Area type="monotone" name="Target Quota (KG)" dataKey="target" stroke="#38bdf8" strokeWidth={1} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorTarget)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {volunteers.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-505 bg-slate-950/20 rounded-2xl border border-white/5 space-y-1.5">
+                  <Activity className="w-8 h-8 text-slate-600 animate-pulse" />
+                  <p className="text-xs font-bold text-slate-400">No telemetry candidates registered</p>
+                  <p className="text-[10px] text-slate-500 max-w-xs">Use the "Seed Telemetry Environment" system action below to test dynamic charts instantly.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={roleChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} interval={0} />
+                    <YAxis stroke="#64748b" fontSize={9} tickLine={false} allowDecimals={false} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#020617', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }} 
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Bar name="Candidates Registered" dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
-          {/* CHART 2: VOLUNTEER GROWTH GRAPH */}
+          {/* CHART 2: CANDIDATES DISTRIBUTIONS BY CITY */}
           <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h3 className="text-base font-bold font-heading text-white">Active Change Makers Expansion</h3>
-                <p className="text-[11px] text-slate-400">Cumulative index tracking our registered waste diversion force over time.</p>
+              <div className="space-y-0.5 text-left">
+                <h3 className="text-sm font-bold font-heading text-white">Geographic Coverage Distribution</h3>
+                <p className="text-[10px] text-slate-400">Active participants mapped by registered municipal city regions.</p>
               </div>
               <div className="text-right">
-                <span className="text-[10px] bg-sky-500/15 text-sky-400 px-2.5 py-1 rounded-full border border-sky-500/10 uppercase tracking-widest font-mono font-bold">
-                  {(volunteers.length + 524).toLocaleString()} Workers
+                <span className="text-[9px] bg-sky-500/15 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/10 uppercase font-mono font-bold">
+                  Live Coordinates
                 </span>
               </div>
             </div>
 
             <div className="h-64 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={volunteerGrowthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#020617', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '11px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar name="Registered Crew" dataKey="volunteers" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {volunteers.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-550 bg-slate-950/20 rounded-2xl border border-white/5 space-y-1.5">
+                  <MapPin className="w-8 h-8 text-slate-600 animate-pulse" />
+                  <p className="text-xs font-bold text-slate-400">No telemetry residency coordinates logged</p>
+                  <p className="text-[10px] text-slate-500 max-w-xs">Dynamic maps and coverage distribution bars will calculate upon intake entries.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={cityChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} />
+                    <YAxis stroke="#64748b" fontSize={9} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#020617', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Bar name="Circularity Workers" dataKey="count" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>
@@ -425,7 +456,7 @@ export default function Admin() {
                   type="submit"
                   className="w-full py-2.5 bg-green-500 text-slate-950 hover:bg-green-400 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-green-500/10 cursor-pointer flex items-center justify-center space-x-1.5"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  
                   <span>Update Live Indicators</span>
                 </button>
               </form>
@@ -593,7 +624,7 @@ export default function Admin() {
                           </div>
                         </th>
                         <th className="p-3 w-[25%]">Contact Info</th>
-                        <th className="p-3 w-[20%]">Skills & Schedule</th>
+                        <th className="p-3 w-[20%]">Applied Role & Status</th>
                         <th 
                           onClick={() => handleSort('createdAt')}
                           className="p-3 hover:text-white cursor-pointer transition-colors select-none w-[15%]"
@@ -646,21 +677,22 @@ export default function Admin() {
                                   <p className="flex items-center space-x-1.5"><Mail className="w-3 h-3 text-rose-440 flex-shrink-0" /><span>{vol.email}</span></p>
                                   <p className="flex items-center space-x-1.5"><Phone className="w-3 h-3 text-rose-340 flex-shrink-0" /><span>{vol.phone}</span></p>
                                 </td>
-                                <td className="p-3 space-y-1">
-                                  <div className="flex flex-wrap gap-1">
-                                    {vol.skills ? (
-                                      vol.skills.split(',').slice(0, 2).map((skill, idx) => (
-                                        <span key={idx} className="text-[8px] bg-rose-500/10 text-rose-400 border border-rose-500/10 px-1 py-0.2 rounded font-bold">
-                                          {skill.trim()}
-                                        </span>
-                                      ))
-                                    ) : (
-                                      <span className="text-[8px] bg-slate-850 text-slate-400 px-1 py-0.2 rounded">General support</span>
-                                    )}
+                                <td className="p-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                                  <div className="text-[11px] font-bold text-white leading-tight">
+                                    {vol.appliedRole || 'Coastal Cleanup Crew'}
                                   </div>
-                                  <div className="flex items-center space-x-1 text-[10px] text-slate-450 font-semibold">
-                                    <Clock className="w-3 h-3 text-amber-500" />
-                                    <span>{vol.availability || 'Weekends'}</span>
+                                  <div>
+                                    <select
+                                      value={vol.status || 'Pending Review'}
+                                      onChange={(e) => updateVolunteerStatus(vol.id, e.target.value as any)}
+                                      className="bg-slate-950 text-[10px] text-emerald-400 font-mono font-extrabold px-2 py-1 rounded border border-emerald-500/15 focus:outline-none focus:border-emerald-400 cursor-pointer w-full max-w-[155px]"
+                                    >
+                                      <option value="Pending Review">Pending Review</option>
+                                      <option value="Pre-qualified">Pre-qualified</option>
+                                      <option value="Orientation Scheduled">Orientation Scheduled</option>
+                                      <option value="Approved">Approved</option>
+                                      <option value="Archived">Archived</option>
+                                    </select>
                                   </div>
                                 </td>
                                 <td className="p-3 font-mono text-[10px] text-slate-500">{vol.createdAt ? vol.createdAt.split(',')[0] : ''}</td>

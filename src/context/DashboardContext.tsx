@@ -22,6 +22,8 @@ interface DashboardContextType {
   submitVolunteer: (app: Omit<VolunteerApplication, 'id' | 'createdAt'>) => Promise<void>;
   submitInitiative: (init: Omit<InitiativeApplication, 'id' | 'createdAt'>) => Promise<void>;
   updateMetrics: (kg: number, action: 'add' | 'reduce' | 'set' | 'reset' | 'set_both', targetKg?: number) => Promise<void>;
+  updateVolunteerStatus: (id: string, status: VolunteerApplication['status']) => Promise<void>;
+  seedMockData: () => Promise<void>;
   refreshAll: () => Promise<void>;
 }
 
@@ -45,6 +47,8 @@ const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
     skills: 'Community Organizing, Public Speaking',
     availability: 'Part-time (Weekends)',
     message: "Passionate about structural plastic reductions. Let's co-create localized collection events!",
+    appliedRole: 'Coastal Cleanup Crew',
+    status: 'Pre-qualified',
     createdAt: new Date(Date.now() - 4 * 3600000).toLocaleString()
   },
   {
@@ -54,9 +58,24 @@ const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
     phone: '+1 (555) 987-6543',
     city: 'Seattle',
     skills: 'Technical logistics, Heavy Lifting, Driving',
-    availability: 'One-off events',
+    availability: 'Weekly (Evenings)',
     message: 'Happy to pick up local e-waste and drive it to standard processing centers.',
+    appliedRole: 'E-waste Logistics Driver',
+    status: 'Pending Review',
     createdAt: new Date(Date.now() - 28 * 3600000).toLocaleString()
+  },
+  {
+    id: 'vol-3',
+    name: 'Emma Rodriguez',
+    email: 'emma.rod@ecoedu.net',
+    phone: '+1 (555) 321-7654',
+    city: 'Boston',
+    skills: 'Eco webinars, Presentation slidecraft, School partnerships',
+    availability: 'Part-time (Weekends)',
+    message: 'I want to teach green energy and sustainable sorting methods to the next generation of students.',
+    appliedRole: 'School Eco-Advocacy Teacher',
+    status: 'Orientation Scheduled',
+    createdAt: new Date(Date.now() - 15 * 3600000).toLocaleString()
   }
 ];
 
@@ -168,6 +187,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!isLocalAuth) return;
 
     try {
+      // Verify we are authenticated in Supabase's eyes to bypass RLS clean-wipes
+      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      if (!user) {
+        console.warn('[SUPABASE FETCH VOLUNTEERS SKIPPED] Unauthenticated session. Restricting wipe of local cache.');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('volunteers')
         .select('*')
@@ -184,6 +210,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           skills: v.skills || '',
           availability: v.availability || '',
           message: v.message || '',
+          appliedRole: v.appliedRole || 'Coastal Cleanup Crew',
+          status: v.status || 'Pending Review',
           createdAt: v.createdAt ? new Date(v.createdAt).toLocaleString() : ''
         })));
       }
@@ -200,6 +228,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!isLocalAuth) return;
 
     try {
+      // Verify we are authenticated in Supabase's eyes to bypass RLS clean-wipes
+      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      if (!user) {
+        console.warn('[SUPABASE FETCH INITIATIVES SKIPPED] Unauthenticated session. Restricting wipe of local cache.');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('initiatives')
         .select('*')
@@ -286,8 +321,18 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
       .subscribe();
 
+    // Set up auth state change observer to load authorized tables when session is established
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        console.log('[SUPABASE AUTH STATE CHANGE] Active admin session established:', event);
+        fetchVolunteers();
+        fetchInitiatives();
+      }
+    });
+
     return () => {
       supabase.removeChannel(channel);
+      authSubscription.unsubscribe();
     };
   }, []);
 
@@ -315,7 +360,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (hasSupabaseConfig && supabase) {
       try {
-        const { error } = await supabase
+        let { error } = await supabase
           .from('volunteers')
           .insert({
             name: app.name,
@@ -324,10 +369,28 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             city: app.city,
             skills: app.skills,
             availability: app.availability,
-            message: app.message
+            message: app.message,
+            appliedRole: app.appliedRole,
+            status: app.status
           });
 
-        if (error) throw error;
+        if (error && error.message.toLowerCase().includes('column')) {
+          console.warn('[SUPABASE INSERT WARNING] Custom columns (appliedRole/status) missing in remote schema, falling back to clean core insert.');
+          const { error: retryError } = await supabase
+            .from('volunteers')
+            .insert({
+              name: app.name,
+              email: app.email,
+              phone: app.phone,
+              city: app.city,
+              skills: app.skills,
+              availability: app.availability,
+              message: app.message
+            });
+          if (retryError) throw retryError;
+        } else if (error) {
+          throw error;
+        }
 
         // Gracefully attempt metrics update (might fail due to RLS if anonymous guest)
         try {
@@ -352,7 +415,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             .from('logs')
             .insert({
               type: 'new_volunteer',
-              description: `${app.name} registered as an active Volunteer Change Maker.`,
+              description: `${app.name} registered as active Change Maker for "${app.appliedRole}".`,
               timestamp: timestampStr
             });
         } catch (logErr) {
@@ -378,12 +441,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       {
         id: 'log-' + Math.random().toString(36).substr(2, 9),
         type: 'new_volunteer',
-        description: `${app.name} registered as an active Volunteer Change Maker.`,
+        description: `${app.name} registered as active Change Maker for "${app.appliedRole}".`,
         timestamp: timestampStr
       },
       ...prev
     ]);
-    addToast(`Welcome aboard, ${app.name}! You have registered successfully as a Change Maker.`, 'success');
+    addToast(`Successfully registered, ${app.name}! Your application is pending orientation.`, 'success');
   };
 
   const submitInitiative = async (init: Omit<InitiativeApplication, 'id' | 'createdAt'>) => {
@@ -541,6 +604,48 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     ]);
   };
 
+  const updateVolunteerStatus = async (id: string, newStatus: VolunteerApplication['status']) => {
+    // Attempt standard database update safely
+    if (hasSupabaseConfig && supabase) {
+      try {
+        const { error } = await supabase
+          .from('volunteers')
+          .update({ status: newStatus })
+          .eq('id', id);
+
+        if (error) {
+          console.warn('[SUPABASE UPDATE WARNING] Could not update status in remote DB (might lack column):', error.message);
+        }
+      } catch (err) {
+        console.warn('[SUPABASE VOLUNTEER STATUS UPDATE ERROR]', err);
+      }
+    }
+
+    // Always update React State & LocalStorage for seamless instant response
+    setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
+    addToast(`Updated application status to: ${newStatus}`, 'info');
+  };
+
+  const seedMockData = async () => {
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    localStorage.setItem('renewa_volunteers', JSON.stringify(DEFAULT_VOLUNTEERS));
+    setVolunteers(DEFAULT_VOLUNTEERS);
+
+    localStorage.setItem('renewa_initiatives', JSON.stringify(DEFAULT_INITIATIVES));
+    setInitiatives(DEFAULT_INITIATIVES);
+
+    localStorage.setItem('renewa_logs', JSON.stringify(DEFAULT_LOGS));
+    setLogs(DEFAULT_LOGS);
+
+    localStorage.setItem('renewa_metrics', JSON.stringify(DEFAULT_METRICS));
+    setMetrics(DEFAULT_METRICS);
+
+    addToast('Standard telemetry mock environment successfully seeded!', 'success');
+    setIsLoading(false);
+  };
+
   return (
     <DashboardContext.Provider value={{
       metrics,
@@ -554,6 +659,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       submitVolunteer,
       submitInitiative,
       updateMetrics,
+      updateVolunteerStatus,
+      seedMockData,
       refreshAll
     }}>
       {children}
