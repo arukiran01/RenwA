@@ -126,7 +126,7 @@ function AnimatedPercentage({ value, duration = 1200 }: { value: number; duratio
 
 export default function Home() {
   const { setActivePage } = useApp();
-  const { metrics } = useDashboard();
+  const { metrics, volunteers, initiatives } = useDashboard();
   const [trackerWidth, setTrackerWidth] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -143,10 +143,9 @@ export default function Home() {
   const dashboardRef = useRef<HTMLDivElement>(null);
 
   const stats = [
-    { value: `${metrics.targetKg.toLocaleString()}+`, label: 'KG Target', icon: Target, color: 'text-green-500' },
-    { value: `${metrics.volunteersCount}+`, label: 'Volunteers', icon: Users, color: 'text-sky-400' },
-    { value: `${metrics.eventsCount}+`, label: 'Events Active', icon: Calendar, color: 'text-green-400' },
-    { value: `${metrics.communitiesCount}+`, label: 'Communities', icon: MapPin, color: 'text-sky-500' }
+    { value: `${metrics.targetKg.toLocaleString()}+`, label: 'KG Target Quota', icon: Target, color: 'text-green-500' },
+    { value: `${Math.max(metrics.volunteersCount, volunteers.length)}`, label: 'Active Volunteers', icon: Users, color: 'text-sky-400' },
+    { value: `${Math.max(metrics.communitiesCount, initiatives.length)}`, label: 'Circularity Initiatives', icon: Calendar, color: 'text-green-400' }
   ];
 
   const valueCards = [

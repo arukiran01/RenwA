@@ -3,6 +3,9 @@ import { VolunteerApplication, InitiativeApplication, WasteMetrics, ActivityLog 
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { collection, doc, setDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { db, hasFirebaseConfig } from '../lib/firebaseClient';
+import { handleFirestoreError, OperationType } from '../lib/firestoreUtils';
 
 export interface Toast {
   id: string;
@@ -58,37 +61,37 @@ const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
     phone: '+1 (555) 987-6543',
     city: 'Seattle',
     skills: 'Technical logistics, Heavy Lifting, Driving',
-    availability: 'Weekly (Evenings)',
-    message: 'Happy to pick up local e-waste and drive it to standard processing centers.',
+    availability: 'Full-time (Weekdays)',
+    message: "Background in inventory tracking. Available for commercial sorting runs and waste weight validation.",
     appliedRole: 'E-waste Logistics Driver',
-    status: 'Pending Review',
-    createdAt: new Date(Date.now() - 28 * 3600000).toLocaleString()
+    status: 'Approved',
+    createdAt: new Date(Date.now() - 17 * 3600000).toLocaleString()
   },
   {
     id: 'vol-3',
     name: 'Emma Rodriguez',
-    email: 'emma.rod@ecoedu.net',
-    phone: '+1 (555) 321-7654',
-    city: 'Boston',
-    skills: 'Eco webinars, Presentation slidecraft, School partnerships',
-    availability: 'Part-time (Weekends)',
-    message: 'I want to teach green energy and sustainable sorting methods to the next generation of students.',
-    appliedRole: 'School Eco-Advocacy Teacher',
-    status: 'Orientation Scheduled',
-    createdAt: new Date(Date.now() - 15 * 3600000).toLocaleString()
+    email: 'emma.learning@edu-earth.net',
+    phone: '+1 (555) 432-1098',
+    city: 'Portland',
+    skills: 'Curriculum Design, Botany, Child Education',
+    availability: 'On-Call',
+    message: 'Excited about expanding local circular sorting in primary schools. Ready to host educational seminars.',
+    appliedRole: 'School Eco-Teacher',
+    status: 'Pending Review',
+    createdAt: new Date(Date.now() - 36 * 3600000).toLocaleString()
   }
 ];
 
 const DEFAULT_INITIATIVES: InitiativeApplication[] = [
   {
     id: 'init-1',
-    name: 'Oceanic Plastics Cleanup',
-    email: 'p.collins@bluefuture.org',
-    phone: '+1 (555) 432-1098',
-    city: 'San Diego',
-    category: 'Coastal Community Waste Points',
-    message: 'Scaling our local beach cleanup initiative by adding mobile collection stations on the sand.',
-    createdAt: new Date(Date.now() - 12 * 3600000).toLocaleString()
+    name: 'Greenwood Sorting Station',
+    email: 'contact@greenwood-community.org',
+    phone: '+1 (555) 234-5678',
+    city: 'San Francisco',
+    category: 'Community Workspace Cleanup',
+    message: 'Applying for waste sorting templates to convert an unused courtyard into a high-throughput community recycling station.',
+    createdAt: new Date(Date.now() - 8 * 3600000).toLocaleString()
   }
 ];
 
@@ -96,14 +99,14 @@ const DEFAULT_LOGS: ActivityLog[] = [
   {
     id: 'log-1',
     type: 'new_initiative',
-    description: 'New Initiative "Oceanic Plastics Cleanup" registered via Toolkit tracker.',
-    timestamp: new Date(Date.now() - 12 * 3600000).toLocaleTimeString()
+    description: 'New Initiative "Greenwood Sorting Station" registered via Circularity Toolkit.',
+    timestamp: '12:00:00 PM'
   },
   {
     id: 'log-2',
     type: 'new_volunteer',
-    description: 'Sarah Jenkins registered to become an active Change Maker.',
-    timestamp: new Date(Date.now() - 4 * 3600000).toLocaleTimeString()
+    description: 'Emma Rodriguez registered to become an active School Eco-Teacher.',
+    timestamp: '02:15:30 PM'
   }
 ];
 
@@ -144,6 +147,25 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const fetchMetrics = async () => {
+    if (hasFirebaseConfig) {
+      try {
+        const snap = await getDoc(doc(db, 'metrics', 'system_metrics'));
+        if (snap.exists()) {
+          const data = snap.data();
+          setMetrics({
+            currentKg: Number(data.currentKg ?? DEFAULT_METRICS.currentKg),
+            targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
+            volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
+            eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
+            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('[FIRESTORE FETCH METRICS ERROR]', err);
+      }
+    }
+
     if (!hasSupabaseConfig || !supabase) return;
     try {
       const { data, error } = await supabase
@@ -161,18 +183,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
           communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
         });
-      } else {
-        // Seed the system_metrics row if empty
-        await supabase
-          .from('impact_metrics')
-          .insert({
-            id: 'system_metrics',
-            currentKg: DEFAULT_METRICS.currentKg,
-            targetKg: DEFAULT_METRICS.targetKg,
-            volunteersCount: DEFAULT_METRICS.volunteersCount,
-            eventsCount: DEFAULT_METRICS.eventsCount,
-            communitiesCount: DEFAULT_METRICS.communitiesCount
-          });
       }
     } catch (err) {
       console.warn('[SUPABASE FETCH METRICS ERROR] Utilizing local state fallback.', err);
@@ -190,7 +200,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Verify we are authenticated in Supabase's eyes to bypass RLS clean-wipes
       const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       if (!user) {
-        console.warn('[SUPABASE FETCH VOLUNTEERS SKIPPED] Unauthenticated session. Restricting wipe of local cache.');
+        console.warn('[SUPABASE FETCH VOLUNTEERS SKIPPED] Unauthenticated session.');
         return;
       }
 
@@ -231,7 +241,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Verify we are authenticated in Supabase's eyes to bypass RLS clean-wipes
       const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       if (!user) {
-        console.warn('[SUPABASE FETCH INITIATIVES SKIPPED] Unauthenticated session. Restricting wipe of local cache.');
+        console.warn('[SUPABASE FETCH INITIATIVES SKIPPED] Unauthenticated session.');
         return;
       }
 
@@ -277,66 +287,177 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const refreshAll = async () => {
     setIsLoading(true);
-    if (hasSupabaseConfig && supabase) {
-      await Promise.all([
-        fetchMetrics(),
-        fetchVolunteers(),
-        fetchInitiatives(),
-        fetchLogs()
-      ]);
-    }
+    await Promise.all([
+      fetchMetrics(),
+      fetchVolunteers(),
+      fetchInitiatives(),
+      fetchLogs()
+    ]);
     // Gentle transition delay
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
   };
 
-  // Real-time synchronization subscription using Supabase Channel Snapshots
+  // Real-time synchronization subscription using Firebase Snapshots & Supabase Connection fallback
   useEffect(() => {
-    if (!hasSupabaseConfig || !supabase) {
+    let unsubMetrics: (() => void) | undefined;
+    let unsubVolunteers: (() => void) | undefined;
+    let unsubInitiatives: (() => void) | undefined;
+    let unsubLogs: (() => void) | undefined;
+
+    if (hasFirebaseConfig) {
+      setIsLoading(true);
+
+      // Listen to metrics updates
+      unsubMetrics = onSnapshot(doc(db, 'metrics', 'system_metrics'), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setMetrics({
+            currentKg: Number(data.currentKg ?? DEFAULT_METRICS.currentKg),
+            targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
+            volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
+            eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
+            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
+          });
+        } else {
+          // Auto initialize document on sandbox first boot
+          setDoc(doc(db, 'metrics', 'system_metrics'), DEFAULT_METRICS);
+        }
+      }, (err) => {
+        handleFirestoreError(err, OperationType.GET, 'metrics/system_metrics');
+      });
+
+      // Listen to volunteers collection snapshots
+      unsubVolunteers = onSnapshot(collection(db, 'volunteers'), (snapshot) => {
+        const loaded: VolunteerApplication[] = [];
+        snapshot.forEach((doc) => {
+          const v = doc.data();
+          loaded.push({
+            id: v.id || doc.id,
+            name: v.name || '',
+            email: v.email || '',
+            phone: v.phone || '',
+            city: v.city || '',
+            skills: v.skills || '',
+            availability: v.availability || '',
+            message: v.message || '',
+            appliedRole: v.appliedRole || 'Coastal Cleanup Crew',
+            status: v.status || 'Pending Review',
+            createdAt: v.createdAt || ''
+          });
+        });
+        if (loaded.length > 0) {
+          // Sort loaded submissions by createdAt or default to maintain order
+          loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setVolunteers(loaded);
+        }
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'volunteers');
+      });
+
+      // Listen to initiatives collection snapshots
+      unsubInitiatives = onSnapshot(collection(db, 'initiatives'), (snapshot) => {
+        const loaded: InitiativeApplication[] = [];
+        snapshot.forEach((doc) => {
+          const i = doc.data();
+          loaded.push({
+            id: i.id || doc.id,
+            name: i.name || '',
+            email: i.email || '',
+            phone: i.phone || '',
+            city: i.city || '',
+            category: i.category || '',
+            message: i.message || '',
+            createdAt: i.createdAt || ''
+          });
+        });
+        if (loaded.length > 0) {
+          loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setInitiatives(loaded);
+        }
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'initiatives');
+      });
+
+      // Listen to activity audit logs
+      unsubLogs = onSnapshot(collection(db, 'logs'), (snapshot) => {
+        const loaded: ActivityLog[] = [];
+        snapshot.forEach((doc) => {
+          const l = doc.data();
+          loaded.push({
+            id: l.id || doc.id,
+            type: l.type || 'waste_update',
+            description: l.description || '',
+            value: l.value,
+            timestamp: l.timestamp || ''
+          });
+        });
+        if (loaded.length > 0) {
+          loaded.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+          setLogs(loaded);
+        }
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'logs');
+      });
+
       setIsLoading(false);
-      return;
     }
 
-    setIsLoading(true);
+    // Parallel Subscriptions structure for Supabase if URL configured
+    let channel: any;
+    if (hasSupabaseConfig && supabase) {
+      setIsLoading(true);
+      const loadSupabaseInitial = async () => {
+        await Promise.all([
+          fetchMetrics(),
+          fetchVolunteers(),
+          fetchInitiatives(),
+          fetchLogs()
+        ]);
+        setIsLoading(false);
+      };
+      loadSupabaseInitial();
 
-    const loadData = async () => {
-      await Promise.all([
-        fetchMetrics(),
-        fetchVolunteers(),
-        fetchInitiatives(),
-        fetchLogs()
-      ]);
+      channel = supabase
+        .channel('schema-changes')
+        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+          fetchMetrics();
+          fetchVolunteers();
+          fetchInitiatives();
+          fetchLogs();
+        })
+        .subscribe();
+
+      const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+          fetchVolunteers();
+          fetchInitiatives();
+        }
+      });
+
+      return () => {
+        if (channel) supabase.removeChannel(channel);
+        authSubscription.unsubscribe();
+        if (unsubMetrics) unsubMetrics();
+        if (unsubVolunteers) unsubVolunteers();
+        if (unsubInitiatives) unsubInitiatives();
+        if (unsubLogs) unsubLogs();
+      };
+    }
+
+    if (!hasSupabaseConfig && !hasFirebaseConfig) {
       setIsLoading(false);
-    };
-    loadData();
-
-    // Listen to changes recursively across schemas
-    const channel = supabase
-      .channel('schema-changes')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        fetchMetrics();
-        fetchVolunteers();
-        fetchInitiatives();
-        fetchLogs();
-      })
-      .subscribe();
-
-    // Set up auth state change observer to load authorized tables when session is established
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        console.log('[SUPABASE AUTH STATE CHANGE] Active admin session established:', event);
-        fetchVolunteers();
-        fetchInitiatives();
-      }
-    });
+    }
 
     return () => {
-      supabase.removeChannel(channel);
-      authSubscription.unsubscribe();
+      if (unsubMetrics) unsubMetrics();
+      if (unsubVolunteers) unsubVolunteers();
+      if (unsubInitiatives) unsubInitiatives();
+      if (unsubLogs) unsubLogs();
     };
   }, []);
 
-  // Save changes back to LocalStorage as fallback key matching
+  // Sync state changes local persistence block as fallback
   useEffect(() => {
     localStorage.setItem('renewa_metrics', JSON.stringify(metrics));
   }, [metrics]);
@@ -358,6 +479,36 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const localCreatedAtStr = new Date().toLocaleString();
     const mockId = 'vol-' + Math.random().toString(36).substr(2, 9);
 
+    const updatedVolunteersCount = metrics.volunteersCount + 1;
+
+    // 1. Firebase Write
+    if (hasFirebaseConfig) {
+      try {
+        await setDoc(doc(db, 'volunteers', mockId), {
+          id: mockId,
+          ...app,
+          createdAt: localCreatedAtStr
+        });
+
+        await setDoc(doc(db, 'metrics', 'system_metrics'), {
+          ...metrics,
+          volunteersCount: updatedVolunteersCount
+        }, { merge: true });
+
+        const logRef = doc(collection(db, 'logs'));
+        await setDoc(logRef, {
+          id: logRef.id,
+          type: 'new_volunteer',
+          description: `${app.name} registered as active Change Maker for "${app.appliedRole}".`,
+          timestamp: timestampStr,
+          createdAt: localCreatedAtStr
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `volunteers/${mockId}`);
+      }
+    }
+
+    // 2. Supabase Write
     if (hasSupabaseConfig && supabase) {
       try {
         let { error } = await supabase
@@ -375,8 +526,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           });
 
         if (error && error.message.toLowerCase().includes('column')) {
-          console.warn('[SUPABASE INSERT WARNING] Custom columns (appliedRole/status) missing in remote schema, falling back to clean core insert.');
-          const { error: retryError } = await supabase
+          console.warn('[SUPABASE INSERT WARNING] Fallback cleanly onto Core columns.');
+          await supabase
             .from('volunteers')
             .insert({
               name: app.name,
@@ -387,14 +538,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               availability: app.availability,
               message: app.message
             });
-          if (retryError) throw retryError;
-        } else if (error) {
-          throw error;
         }
 
-        // Gracefully attempt metrics update (might fail due to RLS if anonymous guest)
         try {
-          const updatedVolunteersCount = metrics.volunteersCount + 1;
           await supabase
             .from('impact_metrics')
             .upsert({
@@ -405,11 +551,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               eventsCount: metrics.eventsCount,
               communitiesCount: metrics.communitiesCount
             });
-        } catch (metricsErr) {
-          console.warn('[SUPABASE METRICS UPSERT SKIPPED/FAILED]', metricsErr);
-        }
+        } catch (_) {}
 
-        // Gracefully attempt to append log
         try {
           await supabase
             .from('logs')
@@ -418,15 +561,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               description: `${app.name} registered as active Change Maker for "${app.appliedRole}".`,
               timestamp: timestampStr
             });
-        } catch (logErr) {
-          console.warn('[SUPABASE LOG INSERT SKIPPED/FAILED]', logErr);
-        }
+        } catch (_) {}
       } catch (err) {
         console.error('[SUPABASE SUBMIT VOLUNTEER EXCEPTION]', err);
       }
     }
 
-    // High integrity Local Storage & React State update (ALWAYS run for seamless instantaneous UX)
+    // 3. React fallback/instant state transitions
     const newVol: VolunteerApplication = {
       id: mockId,
       ...app,
@@ -435,7 +576,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setVolunteers(prev => [newVol, ...prev]);
     setMetrics(prev => ({
       ...prev,
-      volunteersCount: prev.volunteersCount + 1
+      volunteersCount: updatedVolunteersCount
     }));
     setLogs(prev => [
       {
@@ -454,6 +595,38 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const localCreatedAtStr = new Date().toLocaleString();
     const mockId = 'init-' + Math.random().toString(36).substr(2, 9);
 
+    const updatedEventsCount = metrics.eventsCount + 2;
+    const updatedCommunitiesCount = metrics.communitiesCount + 1;
+
+    // 1. Firebase Write
+    if (hasFirebaseConfig) {
+      try {
+        await setDoc(doc(db, 'initiatives', mockId), {
+          id: mockId,
+          ...init,
+          createdAt: localCreatedAtStr
+        });
+
+        await setDoc(doc(db, 'metrics', 'system_metrics'), {
+          ...metrics,
+          eventsCount: updatedEventsCount,
+          communitiesCount: updatedCommunitiesCount
+        }, { merge: true });
+
+        const logRef = doc(collection(db, 'logs'));
+        await setDoc(logRef, {
+          id: logRef.id,
+          type: 'new_initiative',
+          description: `New ecological initiative site registered: "${init.name}" in ${init.city}.`,
+          timestamp: timestampStr,
+          createdAt: localCreatedAtStr
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `initiatives/${mockId}`);
+      }
+    }
+
+    // 2. Supabase Write
     if (hasSupabaseConfig && supabase) {
       try {
         const { error } = await supabase
@@ -469,10 +642,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         if (error) throw error;
 
-        // Gracefully attempt metrics update (might fail due to RLS if anonymous guest)
         try {
-          const updatedEventsCount = metrics.eventsCount + 2;
-          const updatedCommunitiesCount = metrics.communitiesCount + 1;
           await supabase
             .from('impact_metrics')
             .upsert({ 
@@ -483,11 +653,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               eventsCount: updatedEventsCount,
               communitiesCount: updatedCommunitiesCount
             });
-        } catch (metricsErr) {
-          console.warn('[SUPABASE METRICS UPSERT SKIPPED/FAILED]', metricsErr);
-        }
+        } catch (_) {}
 
-        // Gracefully attempt to append log
         try {
           await supabase
             .from('logs')
@@ -496,15 +663,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               description: `New ecological initiative site registered: "${init.name}" in ${init.city}.`,
               timestamp: timestampStr
             });
-        } catch (logErr) {
-          console.warn('[SUPABASE LOG INSERT SKIPPED/FAILED]', logErr);
-        }
+        } catch (_) {}
       } catch (err) {
         console.error('[SUPABASE SUBMIT INITIATIVE EXCEPTION]', err);
       }
     }
 
-    // High integrity Local Storage & React State update (ALWAYS run for seamless instantaneous UX)
+    // 3. React fast state transition
     const newInit: InitiativeApplication = {
       id: mockId,
       ...init,
@@ -513,8 +678,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setInitiatives(prev => [newInit, ...prev]);
     setMetrics(prev => ({
       ...prev,
-      eventsCount: prev.eventsCount + 2,
-      communitiesCount: prev.communitiesCount + 1
+      eventsCount: updatedEventsCount,
+      communitiesCount: updatedCommunitiesCount
     }));
     setLogs(prev => [
       {
@@ -556,9 +721,33 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const timestampStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    // 1. Firebase update
+    if (hasFirebaseConfig) {
+      try {
+        await setDoc(doc(db, 'metrics', 'system_metrics'), {
+          ...metrics,
+          currentKg: finalKg,
+          targetKg: finalTarget
+        });
+
+        const logRef = doc(collection(db, 'logs'));
+        await setDoc(logRef, {
+          id: logRef.id,
+          type: 'waste_update',
+          description: `Metrics updated via Console. Action: ${action.toUpperCase()}`,
+          value: `${finalKg} / ${finalTarget} KG`,
+          timestamp: timestampStr,
+          createdAt: new Date().toLocaleString()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'metrics/system_metrics');
+      }
+    }
+
+    // 2. Supabase update
     if (hasSupabaseConfig && supabase) {
       try {
-        const { error } = await supabase
+        await supabase
           .from('impact_metrics')
           .upsert({
             id: 'system_metrics',
@@ -569,8 +758,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             communitiesCount: metrics.communitiesCount
           });
 
-        if (error) throw error;
-
         await supabase
           .from('logs')
           .insert({
@@ -579,14 +766,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             value: `${finalKg} / ${finalTarget} KG`,
             timestamp: timestampStr
           });
-
-        addToast(`Environmental impact metrics updated successfully!`, 'success');
       } catch (err) {
-        console.error('[SUPABASE METRICS UPDATE EXCEPTION] Falling back to local storage sync.', err);
+        console.error('[SUPABASE METRICS UPDATE EXCEPTION]', err);
       }
     }
 
-    // High integrity Local Storage Sync Fallback (ALWAYS run to prevent visual lag)
+    // 3. Keep state updated
     setMetrics(prev => ({
       ...prev,
       currentKg: finalKg,
@@ -602,26 +787,32 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       },
       ...prev
     ]);
+    addToast(`Environmental impact metrics updated successfully!`, 'success');
   };
 
   const updateVolunteerStatus = async (id: string, newStatus: VolunteerApplication['status']) => {
-    // Attempt standard database update safely
+    // 1. Firebase update
+    if (hasFirebaseConfig) {
+      try {
+        await updateDoc(doc(db, 'volunteers', id), { status: newStatus });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `volunteers/${id}`);
+      }
+    }
+
+    // 2. Supabase update
     if (hasSupabaseConfig && supabase) {
       try {
-        const { error } = await supabase
+        await supabase
           .from('volunteers')
           .update({ status: newStatus })
           .eq('id', id);
-
-        if (error) {
-          console.warn('[SUPABASE UPDATE WARNING] Could not update status in remote DB (might lack column):', error.message);
-        }
       } catch (err) {
         console.warn('[SUPABASE VOLUNTEER STATUS UPDATE ERROR]', err);
       }
     }
 
-    // Always update React State & LocalStorage for seamless instant response
+    // 3. React fast update
     setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
     addToast(`Updated application status to: ${newStatus}`, 'info');
   };
@@ -629,6 +820,54 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const seedMockData = async () => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 600));
+
+    // Clear and restore original environments mock lists in LocalStorage & Cloud DB
+    if (hasFirebaseConfig) {
+      try {
+        await setDoc(doc(db, 'metrics', 'system_metrics'), DEFAULT_METRICS);
+
+        for (const v of DEFAULT_VOLUNTEERS) {
+          await setDoc(doc(db, 'volunteers', v.id), v);
+        }
+
+        for (const i of DEFAULT_INITIATIVES) {
+          await setDoc(doc(db, 'initiatives', i.id), i);
+        }
+
+        // Add seeds tracker logs too
+        for (const l of DEFAULT_LOGS) {
+          await setDoc(doc(db, 'logs', l.id), l);
+        }
+      } catch (err) {
+        console.error('[FIRESTORE SEED EXCEPTION]', err);
+      }
+    }
+
+    if (hasSupabaseConfig && supabase) {
+      try {
+        await supabase
+          .from('impact_metrics')
+          .upsert({ id: 'system_metrics', ...DEFAULT_METRICS });
+
+        for (const v of DEFAULT_VOLUNTEERS) {
+          await supabase
+            .from('volunteers')
+            .upsert({
+              name: v.name,
+              email: v.email,
+              phone: v.phone,
+              city: v.city,
+              skills: v.skills,
+              availability: v.availability,
+              message: v.message,
+              appliedRole: v.appliedRole,
+              status: v.status
+            });
+        }
+      } catch (err) {
+        console.warn('[SUPABASE SEED ERROR]', err);
+      }
+    }
 
     localStorage.setItem('renewa_volunteers', JSON.stringify(DEFAULT_VOLUNTEERS));
     setVolunteers(DEFAULT_VOLUNTEERS);
@@ -669,7 +908,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       <div className="fixed bottom-6 right-6 z-[999] max-w-sm w-full pointer-events-none space-y-3">
         <AnimatePresence>
           {toasts.map((toast) => {
-            // Helper to get configuration based on toast.type
             const getToastStyles = (type: 'success' | 'error' | 'info') => {
               switch (type) {
                 case 'error':
@@ -749,4 +987,3 @@ export const useDashboard = () => {
   }
   return context;
 };
-

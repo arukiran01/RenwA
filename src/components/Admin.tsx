@@ -307,7 +307,7 @@ export default function Admin() {
                   <Users className="w-5 h-5 text-sky-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-white">{volunteers.length + 524}</p>
+                  <p className="text-3xl font-black font-heading text-white">{volunteers.length}</p>
                   <span className="text-[10px] text-slate-500 uppercase tracking-widest">Active Change Makers</span>
                 </div>
               </div>
@@ -318,7 +318,7 @@ export default function Admin() {
                   <Rocket className="w-5 h-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-white">{initiatives.length + 57}</p>
+                  <p className="text-3xl font-black font-heading text-white">{initiatives.length}</p>
                   <span className="text-[10px] text-slate-500 uppercase tracking-widest">Active Regional plans</span>
                 </div>
               </div>

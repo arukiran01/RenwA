@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS volunteers (
   skills TEXT,
   availability TEXT,
   message TEXT,
+  "appliedRole" TEXT,
+  status TEXT DEFAULT 'Pending Review',
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -117,6 +119,12 @@ CREATE POLICY "Enable public metrics read access"
   ON impact_metrics 
   FOR SELECT 
   USING (true);
+
+CREATE POLICY "Enable public metrics updation for guests"
+  ON impact_metrics
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 CREATE POLICY "Enable write access for authenticated admins" 
   ON impact_metrics 
