@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "VolunteerApplication": {
+      "title": "Volunteer Application",
+      "description": "Details of volunteer registrations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "skills": { "type": "string" },
+        "availability": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "phone", "city", "skills", "availability", "createdAt"]
+    },
+    "InitiativeApplication": {
+      "title": "Initiative Application",
+      "description": "Details of registered community initiatives",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "phone", "city", "category", "createdAt"]
+    },
+    "WasteMetrics": {
+      "title": "Waste Metrics",
+      "description": "Current system-wide environmental waste metrics",
+      "type": "object",
+      "properties": {
+        "currentKg": { "type": "integer" },
+        "targetKg": { "type": "integer" },
+        "volunteersCount": { "type": "integer" },
+        "eventsCount": { "type": "integer" },
+        "communitiesCount": { "type": "integer" }
+      },
+      "required": ["currentKg", "targetKg", "volunteersCount", "eventsCount", "communitiesCount"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Environmental event activity log item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "value": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "type", "description", "timestamp"]
+    }
+  },
+  "firestore": {
+    "volunteers": {
+      "schema": "VolunteerApplication",
+      "description": "Registered change-maker volunteer applications"
+    },
+    "initiatives": {
+      "schema": "InitiativeApplication",
+      "description": "Registered ecological waste initiatives"
+    },
+    "metrics": {
+      "schema": "WasteMetrics",
+      "description": "Key performance waste metrics document"
+    },
+    "logs": {
+      "schema": "ActivityLog",
+      "description": "Historical audit logs of initiative actions"
+    }
+  }
+}

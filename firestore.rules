@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (Pillar 1)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Volunteers collection: Everyone can enroll, only authenticated staff/admins can read/list/update
+    match /volunteers/{volunteerId} {
+      allow create: if request.resource.data.name is string && request.resource.data.name.size() <= 200;
+      allow read, write: if isSignedIn();
+    }
+
+    // Initiatives collection: Everyone can declare an initiative, only authenticated staff/admins can manage
+    match /initiatives/{initiativeId} {
+      allow create: if request.resource.data.name is string && request.resource.data.name.size() <= 200;
+      allow read, write: if isSignedIn();
+    }
+
+    // System Metrics: Public reading allowed for tracking sustainability, writing restricted to authorized users
+    match /metrics/{metricId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Activity Logs: Automatic creation on actions, reading restricted to console admins
+    match /logs/{logId} {
+      allow create: if request.resource.data.description is string;
+      allow read: if isSignedIn();
+    }
+  }
+}
