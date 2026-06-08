@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useDashboard } from '../context/DashboardContext';
-import { motion, useAnimation, AnimatePresence, useScroll, useTransform } from 'motion/react';
+import { motion, useAnimation, AnimatePresence, useScroll, useTransform, useInView } from 'motion/react';
 import {
   Leaf,
   ChevronDown,
@@ -60,17 +60,28 @@ const carouselImages = [
   }
 ];
 
-// Detailed animated helper for real-time numerical counters
+// Detailed animated helper for real-time numerical counters triggered on scroll
 function AnimatedCounter({ value, duration = 1200 }: { value: number; duration?: number }) {
-  const [displayValue, setDisplayValue] = useState(value);
-  const previousValueRef = useRef(value);
+  const [displayValue, setDisplayValue] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const previousValueRef = useRef(0);
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
-    const start = previousValueRef.current;
+    if (!isInView) return;
+
+    const start = hasStartedRef.current ? previousValueRef.current : 0;
     const end = value;
-    if (start === end) return;
 
     previousValueRef.current = value;
+    hasStartedRef.current = true;
+
+    if (start === end) {
+      setDisplayValue(end);
+      return;
+    }
+
     const startTime = performance.now();
 
     const animate = (now: number) => {
@@ -87,22 +98,33 @@ function AnimatedCounter({ value, duration = 1200 }: { value: number; duration?:
     };
 
     requestAnimationFrame(animate);
-  }, [value, duration]);
+  }, [value, duration, isInView]);
 
-  return <>{displayValue.toLocaleString()}</>;
+  return <span ref={ref}>{displayValue.toLocaleString()}</span>;
 }
 
-// Detailed animated helper for real-time percentages
+// Detailed animated helper for real-time percentages triggered on scroll
 function AnimatedPercentage({ value, duration = 1200 }: { value: number; duration?: number }) {
-  const [displayValue, setDisplayValue] = useState(value);
-  const previousValueRef = useRef(value);
+  const [displayValue, setDisplayValue] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const previousValueRef = useRef(0);
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
-    const start = previousValueRef.current;
+    if (!isInView) return;
+
+    const start = hasStartedRef.current ? previousValueRef.current : 0;
     const end = value;
-    if (start === end) return;
 
     previousValueRef.current = value;
+    hasStartedRef.current = true;
+
+    if (start === end) {
+      setDisplayValue(end);
+      return;
+    }
+
     const startTime = performance.now();
 
     const animate = (now: number) => {
@@ -119,9 +141,9 @@ function AnimatedPercentage({ value, duration = 1200 }: { value: number; duratio
     };
 
     requestAnimationFrame(animate);
-  }, [value, duration]);
+  }, [value, duration, isInView]);
 
-  return <>{displayValue.toFixed(1)}%</>;
+  return <span ref={ref}>{displayValue.toFixed(1)}%</span>;
 }
 
 export default function Home() {
@@ -145,7 +167,8 @@ export default function Home() {
   const stats = [
     { value: `${metrics.targetKg.toLocaleString()}+`, label: 'KG Target Quota', icon: Target, color: 'text-green-500' },
     { value: `${Math.max(metrics.volunteersCount, volunteers.length)}`, label: 'Active Volunteers', icon: Users, color: 'text-sky-400' },
-    { value: `${Math.max(metrics.communitiesCount, initiatives.length)}`, label: 'Circularity Initiatives', icon: Calendar, color: 'text-green-400' }
+    { value: `${Math.max(metrics.communitiesCount, initiatives.length)}`, label: 'Circularity Initiatives', icon: Calendar, color: 'text-green-400' },
+    { value: `${metrics.eventsCount}`, label: 'Eco-Events Hosted', icon: Sprout, color: 'text-emerald-400' }
   ];
 
   const valueCards = [
@@ -532,11 +555,24 @@ export default function Home() {
               </div>
               <div className="w-full bg-slate-950 rounded-full h-2 mt-4 overflow-hidden border border-white/5 relative">
                 <motion.div
-                  className="bg-gradient-to-r from-sky-500 to-indigo-400 h-full rounded-full relative"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${percentage}%` }}
+                  key={`top-bar-${percentage}`}
+                  className="bg-gradient-to-r from-sky-500 to-indigo-400 h-full rounded-full relative overflow-hidden"
+                  initial={{ width: "0%" }}
+                  whileInView={{ width: `${percentage}%` }}
+                  viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                 >
+                  {/* Flowing energy particle traversing the progress bar */}
+                  <motion.div
+                    className="absolute top-0 bottom-0 w-24 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12"
+                    initial={{ left: "-6rem" }}
+                    animate={{ left: "100%" }}
+                    transition={{
+                      duration: 2.0,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }}
+                  />
                   {/* Glowing dynamic tip indicator */}
                   <motion.div 
                     className="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[2px] rounded-full"
@@ -581,11 +617,24 @@ export default function Home() {
               {/* Green filled active progress track */}
               <motion.div
                 id="active_progress_track"
-                className="absolute top-1/2 left-0 h-2 bg-gradient-to-r from-green-400 via-emerald-500 to-emerald-400 rounded-full -translate-y-1/2 shadow-[0_0_15px_rgba(52,211,153,0.6)]"
-                initial={{ width: 0 }}
-                animate={{ width: `${percentage}%` }}
+                key={`corridor-bar-${percentage}`}
+                className="absolute top-1/2 left-0 h-2 bg-gradient-to-r from-green-400 via-emerald-500 to-emerald-400 rounded-full -translate-y-1/2 shadow-[0_0_15px_rgba(52,211,153,0.6)] overflow-hidden"
+                initial={{ width: "0%" }}
+                whileInView={{ width: `${percentage}%` }}
+                viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
               >
+                {/* Flowing energy particle traversing the milestone corridor bar */}
+                <motion.div
+                  className="absolute top-0 bottom-0 w-32 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12"
+                  initial={{ left: "-8rem" }}
+                  animate={{ left: "100%" }}
+                  transition={{
+                    duration: 1.8,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                />
                 {/* Visual glow element sliding right on top of the progressive tracker */}
                 <motion.div 
                   className="absolute right-0 top-0 bottom-0 w-3 bg-white blur-[3px] rounded-full"
@@ -621,7 +670,7 @@ export default function Home() {
                         <motion.div
                           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all relative z-10 ${
                             reached
-                              ? 'bg-green-500 border-green-305 shadow-[0_0_15px_rgba(34,197,94,0.7)] text-slate-950 scale-125'
+                              ? 'bg-green-500 border-green-300 shadow-[0_0_15px_rgba(34,197,94,0.7)] text-slate-950 scale-125'
                               : 'bg-slate-950 border-slate-800 text-slate-500'
                           }`}
                           animate={reached ? { scale: [1.2, 1.35, 1.2] } : {}}
