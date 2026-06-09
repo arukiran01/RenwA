@@ -24,7 +24,9 @@ import {
   FileText,
   GlassWater,
   PackageOpen,
-  Hammer
+  Hammer,
+  GraduationCap,
+  Globe
 } from 'lucide-react';
 
 const carouselImages = [
@@ -146,6 +148,22 @@ function AnimatedPercentage({ value, duration = 1200 }: { value: number; duratio
   return <span ref={ref}>{displayValue.toFixed(1)}%</span>;
 }
 
+// Custom helper for parsing and animating formatted string values (e.g. schools, communities, events)
+function StringAnimatedCounter({ value }: { value: string }) {
+  // Extract only numbers for the counter
+  const cleanNumStr = value.replace(/[^0-9]/g, '');
+  const numericVal = parseInt(cleanNumStr) || 0;
+  // Get non-numeric characters at the end (e.g. '+')
+  const suffix = value.replace(/[0-9,.]/g, '');
+
+  return (
+    <>
+      <AnimatedCounter value={numericVal} />
+      {suffix}
+    </>
+  );
+}
+
 export default function Home() {
   const { setActivePage } = useApp();
   const { metrics, volunteers, initiatives } = useDashboard();
@@ -165,10 +183,42 @@ export default function Home() {
   const dashboardRef = useRef<HTMLDivElement>(null);
 
   const stats = [
-    { value: `${metrics.targetKg.toLocaleString()}+`, label: 'KG Target Quota', icon: Target, color: 'text-green-500' },
-    { value: `${Math.max(metrics.volunteersCount, volunteers.length)}`, label: 'Active Volunteers', icon: Users, color: 'text-sky-400' },
-    { value: `${Math.max(metrics.communitiesCount, initiatives.length)}`, label: 'Circularity Initiatives', icon: Calendar, color: 'text-green-400' },
-    { value: `${metrics.eventsCount}`, label: 'Eco-Events Hosted', icon: Sprout, color: 'text-emerald-400' }
+    { 
+      value: `${metrics.schoolsCount}`, 
+      label: 'Schools Collaborated', 
+      icon: GraduationCap, 
+      color: 'text-green-400',
+      borderColor: 'hover:border-green-500/40',
+      glowColor: 'via-green-500/10',
+      bgImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=600&q=80' 
+    },
+    { 
+      value: `${metrics.eventsCount}`, 
+      label: 'Events Hosted', 
+      icon: Calendar, 
+      color: 'text-teal-400',
+      borderColor: 'hover:border-teal-500/40',
+      glowColor: 'via-teal-500/10',
+      bgImage: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=600&q=80' 
+    },
+    { 
+      value: `${Math.max(metrics.volunteersCount, volunteers.length)}`, 
+      label: 'Active Volunteers', 
+      icon: Users, 
+      color: 'text-sky-400',
+      borderColor: 'hover:border-sky-500/40',
+      glowColor: 'via-sky-500/10',
+      bgImage: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=600&q=80' 
+    },
+    { 
+      value: `${metrics.communitiesCount}`, 
+      label: 'Communities Collaborated', 
+      icon: Globe, 
+      color: 'text-emerald-400',
+      borderColor: 'hover:border-emerald-500/40',
+      glowColor: 'via-emerald-500/10',
+      bgImage: 'https://images.unsplash.com/photo-1416339306562-f3d12fefd36f?auto=format&fit=crop&w=600&q=80' 
+    }
   ];
 
   const valueCards = [
@@ -774,30 +824,55 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SECTION 2: Impact Numbers (Animated counters view) */}
-      <section id="metrics_highlight" className="py-24 bg-slate-950 relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, idx) => (
-              <div
-                key={idx}
-                id={`stat_card_row_${idx}`}
-                className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 text-center space-y-3"
-              >
-                <div className="w-10 h-10 rounded-lg bg-white/5 mx-auto flex items-center justify-center">
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
-                <div className="text-3xl md:text-4xl font-black font-heading text-white">
-                  {stat.value}
-                </div>
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+       {/* SECTION 2: Impact Numbers (Animated counters view) */}
+       <section id="metrics_highlight" className="py-24 bg-slate-950 relative">
+         <div className="max-w-7xl mx-auto px-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+             {stats.map((stat, idx) => (
+               <motion.div
+                 key={idx}
+                 id={`stat_card_row_${idx}`}
+                 whileHover={{ y: -10, scale: 1.05 }}
+                 whileTap={{ scale: 0.98 }}
+                 transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+                 className={`group relative p-6 md:p-8 bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/5 ${stat.borderColor} text-center space-y-4 overflow-hidden shadow-2xl transition-all duration-300 cursor-default animate-fade-in`}
+               >
+                 {/* Beautiful high-end environmental background image with extreme vignette */}
+                 <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
+                   <img
+                     src={stat.bgImage}
+                     alt={stat.label}
+                     className="w-full h-full object-cover opacity-20 saturate-[0.95] brightness-[0.45] group-hover:opacity-35 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none"
+                     referrerPolicy="no-referrer"
+                   />
+                   {/* Premium dark gradient overlay for deep contrast & pristine readability */}
+                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" />
+                 </div>
+
+                 {/* Glow backdrop matching the theme */}
+                 <div className={`absolute -inset-px rounded-2xl bg-gradient-to-r from-transparent ${stat.glowColor} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10`} />
+
+                 {/* Subtle top horizontal green/emerald glow accent */}
+                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 group-hover:via-emerald-500/50 to-transparent transition-all duration-500 z-10" />
+
+                 {/* Animated status glow/ring inside card on hover */}
+                 <div className="relative z-10 w-12 h-12 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 group-hover:bg-white/10 mx-auto flex items-center justify-center transition-all duration-300">
+                   <stat.icon className={`w-5.5 h-5.5 ${stat.color} group-hover:scale-110 transition-transform duration-300`} />
+                 </div>
+
+                 <div className="relative z-10 space-y-1">
+                   <h3 className="text-3xl md:text-4xl font-black font-heading text-white tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                     <StringAnimatedCounter value={stat.value} />
+                   </h3>
+                   <p className="text-[9px] md:text-[10px] lg:text-xs font-black text-slate-400 group-hover:text-amber-300 uppercase tracking-widest leading-relaxed transition-colors duration-300">
+                     {stat.label}
+                   </p>
+                 </div>
+               </motion.div>
+             ))}
+           </div>
+         </div>
+       </section>
 
       {/* SECTION 3: Recycling Journey (Beautiful timeline map) */}
       <section id="journey_section" className="py-24 bg-slate-950/20 border-t border-white/5 relative overflow-hidden">

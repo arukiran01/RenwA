@@ -41,6 +41,7 @@ export interface WasteMetrics {
   volunteersCount: number;
   eventsCount: number;
   communitiesCount: number;
+  schoolsCount: number;
 }
 
 export interface ActivityLog {

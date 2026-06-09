@@ -24,7 +24,7 @@ interface DashboardContextType {
   removeToast: (id: string) => void;
   submitVolunteer: (app: Omit<VolunteerApplication, 'id' | 'createdAt'>) => Promise<void>;
   submitInitiative: (init: Omit<InitiativeApplication, 'id' | 'createdAt'>) => Promise<void>;
-  updateMetrics: (kg: number, action: 'add' | 'reduce' | 'set' | 'reset' | 'set_both', targetKg?: number) => Promise<void>;
+  updateMetrics: (kg: number, action: 'add' | 'reduce' | 'set' | 'reset' | 'set_both' | 'set_all', targetKg?: number, extra?: Partial<WasteMetrics>) => Promise<void>;
   updateVolunteerStatus: (id: string, status: VolunteerApplication['status']) => Promise<void>;
   seedMockData: () => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -37,7 +37,8 @@ const DEFAULT_METRICS: WasteMetrics = {
   targetKg: 10000,
   volunteersCount: 524,
   eventsCount: 112,
-  communitiesCount: 58
+  communitiesCount: 4,
+  schoolsCount: 3
 };
 
 const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
@@ -157,7 +158,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
             volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
             eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
-            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
+            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount),
+            schoolsCount: Number(data.schoolsCount ?? DEFAULT_METRICS.schoolsCount)
           });
           return;
         }
@@ -175,15 +177,16 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         .maybeSingle();
 
       if (error) throw error;
-      if (data) {
-        setMetrics({
-          currentKg: Number(data.currentKg ?? DEFAULT_METRICS.currentKg),
-          targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
-          volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
-          eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
-          communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
-        });
-      }
+        if (data) {
+          setMetrics({
+            currentKg: Number(data.currentKg ?? DEFAULT_METRICS.currentKg),
+            targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
+            volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
+            eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
+            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount),
+            schoolsCount: Number(data.schoolsCount ?? DEFAULT_METRICS.schoolsCount)
+          });
+        }
     } catch (err) {
       console.warn('[SUPABASE FETCH METRICS ERROR] Utilizing local state fallback.', err);
     }
@@ -317,7 +320,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             targetKg: Number(data.targetKg ?? DEFAULT_METRICS.targetKg),
             volunteersCount: Number(data.volunteersCount ?? DEFAULT_METRICS.volunteersCount),
             eventsCount: Number(data.eventsCount ?? DEFAULT_METRICS.eventsCount),
-            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount)
+            communitiesCount: Number(data.communitiesCount ?? DEFAULT_METRICS.communitiesCount),
+            schoolsCount: Number(data.schoolsCount ?? DEFAULT_METRICS.schoolsCount)
           });
         } else {
           // Auto initialize document on sandbox first boot
@@ -693,9 +697,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addToast(`New ecological site "${init.name}" has been successfully registered!`, 'success');
   };
 
-  const updateMetrics = async (kg: number, action: 'add' | 'reduce' | 'set' | 'reset' | 'set_both', targetKg?: number) => {
+  const updateMetrics = async (kg: number, action: 'add' | 'reduce' | 'set' | 'reset' | 'set_both' | 'set_all', targetKg?: number, extra?: Partial<WasteMetrics>) => {
     let finalKg = metrics.currentKg;
     let finalTarget = metrics.targetKg;
+    let finalVolunteers = metrics.volunteersCount;
+    let finalEvents = metrics.eventsCount;
+    let finalCommunities = metrics.communitiesCount;
+    let finalSchools = metrics.schoolsCount;
 
     switch (action) {
       case 'add':
@@ -713,9 +721,23 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           finalTarget = Math.max(targetKg, 1);
         }
         break;
+      case 'set_all':
+        if (extra) {
+          finalKg = extra.currentKg !== undefined ? extra.currentKg : finalKg;
+          finalTarget = extra.targetKg !== undefined ? extra.targetKg : finalTarget;
+          finalVolunteers = extra.volunteersCount !== undefined ? extra.volunteersCount : finalVolunteers;
+          finalEvents = extra.eventsCount !== undefined ? extra.eventsCount : finalEvents;
+          finalCommunities = extra.communitiesCount !== undefined ? extra.communitiesCount : finalCommunities;
+          finalSchools = extra.schoolsCount !== undefined ? extra.schoolsCount : finalSchools;
+        }
+        break;
       case 'reset':
         finalKg = DEFAULT_METRICS.currentKg;
         finalTarget = DEFAULT_METRICS.targetKg;
+        finalVolunteers = DEFAULT_METRICS.volunteersCount;
+        finalEvents = DEFAULT_METRICS.eventsCount;
+        finalCommunities = DEFAULT_METRICS.communitiesCount;
+        finalSchools = DEFAULT_METRICS.schoolsCount;
         break;
     }
 
@@ -725,9 +747,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (hasFirebaseConfig) {
       try {
         await setDoc(doc(db, 'metrics', 'system_metrics'), {
-          ...metrics,
           currentKg: finalKg,
-          targetKg: finalTarget
+          targetKg: finalTarget,
+          volunteersCount: finalVolunteers,
+          eventsCount: finalEvents,
+          communitiesCount: finalCommunities,
+          schoolsCount: finalSchools
         });
 
         const logRef = doc(collection(db, 'logs'));
@@ -735,7 +760,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           id: logRef.id,
           type: 'waste_update',
           description: `Metrics updated via Console. Action: ${action.toUpperCase()}`,
-          value: `${finalKg} / ${finalTarget} KG`,
+          value: `${finalKg} KG / ${finalTarget} KG`,
           timestamp: timestampStr,
           createdAt: new Date().toLocaleString()
         });
@@ -753,9 +778,10 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             id: 'system_metrics',
             currentKg: finalKg,
             targetKg: finalTarget,
-            volunteersCount: metrics.volunteersCount,
-            eventsCount: metrics.eventsCount,
-            communitiesCount: metrics.communitiesCount
+            volunteersCount: finalVolunteers,
+            eventsCount: finalEvents,
+            communitiesCount: finalCommunities,
+            schoolsCount: finalSchools
           });
 
         await supabase
@@ -763,7 +789,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           .insert({
             type: 'waste_update',
             description: `Metrics updated via Console. Action: ${action.toUpperCase()}`,
-            value: `${finalKg} / ${finalTarget} KG`,
+            value: `${finalKg} KG / ${finalTarget} KG`,
             timestamp: timestampStr
           });
       } catch (err) {
@@ -772,11 +798,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
 
     // 3. Keep state updated
-    setMetrics(prev => ({
-      ...prev,
+    setMetrics({
       currentKg: finalKg,
-      targetKg: finalTarget
-    }));
+      targetKg: finalTarget,
+      volunteersCount: finalVolunteers,
+      eventsCount: finalEvents,
+      communitiesCount: finalCommunities,
+      schoolsCount: finalSchools
+    });
     setLogs(prev => [
       {
         id: 'log-' + Math.random().toString(36).substr(2, 9),

@@ -7,13 +7,9 @@ import {
   Target,
   Users,
   Award,
-  Plus,
-  Minus,
   Sliders,
-  RotateCcw,
   Activity,
   UserPlus,
-  Rocket,
   Trash2,
   Lock,
   LogOut,
@@ -22,25 +18,12 @@ import {
   Phone,
   MapPin,
   Calendar,
-  ChevronDown,
-  ChevronUp,
-  Briefcase,
   Clock,
   Search,
-  ArrowUpDown
+  ArrowUpDown,
+  GraduationCap,
+  Globe
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
 
 export default function Admin() {
   const {
@@ -60,11 +43,13 @@ export default function Admin() {
     isLoading
   } = useDashboard();
 
-  const [inputVal, setInputVal] = useState<string>('500');
   const [currentValInput, setCurrentValInput] = useState<string>('');
   const [targetValInput, setTargetValInput] = useState<string>('');
+  const [schoolsValInput, setSchoolsValInput] = useState<string>('');
+  const [eventsValInput, setEventsValInput] = useState<string>('');
+  const [volunteersValInput, setVolunteersValInput] = useState<string>('');
+  const [communitiesValInput, setCommunitiesValInput] = useState<string>('');
   const [expandedVolunteerId, setExpandedVolunteerId] = useState<string | null>(null);
-  const [expandedInitiativeId, setExpandedInitiativeId] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'name' | 'city' | 'createdAt'>('createdAt');
@@ -119,8 +104,12 @@ export default function Admin() {
     if (metrics) {
       setCurrentValInput(metrics.currentKg.toString());
       setTargetValInput(metrics.targetKg.toString());
+      setSchoolsValInput((metrics.schoolsCount ?? 3).toString());
+      setEventsValInput((metrics.eventsCount ?? 112).toString());
+      setVolunteersValInput((metrics.volunteersCount ?? 524).toString());
+      setCommunitiesValInput((metrics.communitiesCount ?? 4).toString());
     }
-  }, [metrics.currentKg, metrics.targetKg]);
+  }, [metrics]);
 
   // Safety block redirect if unauthorized
   React.useEffect(() => {
@@ -133,61 +122,28 @@ export default function Admin() {
 
   const percentage = Math.min((metrics.currentKg / metrics.targetKg) * 100, 100);
 
-  // Dynamic Real-Time Calculations of Registered Candidates
-  const roleChartData = React.useMemo(() => {
-    const counts: Record<string, number> = {};
-    if (volunteers && volunteers.length > 0) {
-      volunteers.forEach(v => {
-        const role = v.appliedRole || 'General Circularity Advocate';
-        counts[role] = (counts[role] || 0) + 1;
-      });
-    } else {
-      counts['Coastal Cleanup Crew'] = 0;
-      counts['E-waste Logistics Driver'] = 0;
-      counts['School Eco-Advocacy Teacher'] = 0;
-    }
-    return Object.entries(counts).map(([role, count]) => ({
-      name: role.replace('Volunteer ', '').replace('Advocacy ', '').trim(),
-      count
-    }));
-  }, [volunteers]);
-
-  const cityChartData = React.useMemo(() => {
-    const counts: Record<string, number> = {};
-    if (volunteers && volunteers.length > 0) {
-      volunteers.forEach(v => {
-        const city = v.city || 'Seattle';
-        counts[city] = (counts[city] || 0) + 1;
-      });
-    } else {
-      counts['San Diego'] = 0;
-      counts['Seattle'] = 0;
-      counts['Boston'] = 0;
-    }
-    return Object.entries(counts).map(([city, count]) => ({
-      name: city.split(',')[0],
-      count
-    }));
-  }, [volunteers]);
-
-  const handleAction = (action: 'add' | 'reduce' | 'set' | 'reset') => {
-    const value = parseFloat(inputVal);
-    if (isNaN(value) && action !== 'reset') {
-      alert('Please insert a realistic numerical value.');
-      return;
-    }
-    updateMetrics(value, action);
-  };
-
-  const handleSetBothIndicators = (e: React.FormEvent) => {
+  const handleSetAllIndicators = (e: React.FormEvent) => {
     e.preventDefault();
     const currentVal = parseFloat(currentValInput);
     const targetVal = parseFloat(targetValInput);
+    const schoolsVal = parseInt(schoolsValInput) || 0;
+    const eventsVal = parseInt(eventsValInput) || 0;
+    const volunteersVal = parseInt(volunteersValInput) || 0;
+    const communitiesVal = parseInt(communitiesValInput) || 0;
+
     if (isNaN(currentVal) || isNaN(targetVal)) {
       alert('Please introduce real numeric metrics values.');
       return;
     }
-    updateMetrics(currentVal, 'set_both', targetVal);
+
+    updateMetrics(currentVal, 'set_all', targetVal, {
+      currentKg: currentVal,
+      targetKg: targetVal,
+      schoolsCount: schoolsVal,
+      eventsCount: eventsVal,
+      volunteersCount: volunteersVal,
+      communitiesCount: communitiesVal
+    });
   };
 
   return (
@@ -252,10 +208,10 @@ export default function Admin() {
         </div>
 
         {/* METRICS COUNT CARDS ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
           {isLoading ? (
-            Array.from({ length: 5 }).map((_, id) => (
-              <div key={id} className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-4 animate-pulse">
+            Array.from({ length: 6 }).map((_, id) => (
+              <div key={id} className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-4 animate-pulse">
                 <div className="flex justify-between items-center">
                   <div className="h-3 bg-slate-800 rounded w-1/2" />
                   <div className="w-5 h-5 bg-slate-800 rounded-lg" />
@@ -268,142 +224,75 @@ export default function Admin() {
             ))
           ) : (
             <>
-              <div className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+              <div className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Current Collection</span>
                   <Award className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-white">{metrics.currentKg.toLocaleString()}</p>
+                  <p className="text-2xl font-black font-heading text-white">{metrics.currentKg.toLocaleString()}</p>
                   <span className="text-[10px] text-slate-500 uppercase tracking-widest">Metric Unit: KG</span>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+              <div className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Target Quota</span>
                   <Target className="w-5 h-5 text-sky-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-white">{metrics.targetKg.toLocaleString()}</p>
+                  <p className="text-2xl font-black font-heading text-white">{metrics.targetKg.toLocaleString()}</p>
                   <span className="text-[10px] text-slate-500 uppercase tracking-widest">Metric Unit: KG</span>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+              <div className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
                 <div className="flex items-center justify-between text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Progress %</span>
-                  <TrendingUp className="w-5 h-5 text-green-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Schools Collab.</span>
+                  <GraduationCap className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-green-400">{percentage.toFixed(1)}%</p>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Diversion threshold</span>
+                  <p className="text-2xl font-black font-heading text-white">{metrics.schoolsCount ?? 3}</p>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Dynamic count</span>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+              <div className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-xs font-bold uppercase tracking-wider">Events Hosted</span>
+                  <Calendar className="w-5 h-5 text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-black font-heading text-white">{metrics.eventsCount ?? 112}</p>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Dynamic count</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Volunteers</span>
                   <Users className="w-5 h-5 text-sky-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-white">{volunteers.length}</p>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Active Change Makers</span>
+                  <p className="text-2xl font-black font-heading text-white">{Math.max(metrics.volunteersCount ?? 524, volunteers.length)}</p>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Dynamic count</span>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+              <div className="p-4 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
                 <div className="flex items-center justify-between text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Toolkit Initiatives</span>
-                  <Rocket className="w-5 h-5 text-purple-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Communities Collab.</span>
+                  <Globe className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black font-heading text-white">{initiatives.length}</p>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Active Regional plans</span>
+                  <p className="text-2xl font-black font-heading text-white">{metrics.communitiesCount ?? 4}</p>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Dynamic count</span>
                 </div>
               </div>
             </>
           )}
         </div>
 
-        {/* RECHARTS ECO-ANALYTICS SYSTEM */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* CHART 1: CANDIDATES DISTRIBUTIONS BY PATH */}
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5 text-left">
-                <h3 className="text-sm font-bold font-heading text-white">Candidates by Applied Path</h3>
-                <p className="text-[10px] text-slate-400">Total registered applications classified by selected role requirements.</p>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full border border-green-500/10 uppercase font-mono font-bold">
-                  {volunteers.length} Raw Files
-                </span>
-              </div>
-            </div>
-            
-            <div className="h-64 w-full pt-2">
-              {volunteers.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-505 bg-slate-950/20 rounded-2xl border border-white/5 space-y-1.5">
-                  <Activity className="w-8 h-8 text-slate-600 animate-pulse" />
-                  <p className="text-xs font-bold text-slate-400">No telemetry candidates registered</p>
-                  <p className="text-[10px] text-slate-500 max-w-xs">Use the "Seed Telemetry Environment" system action below to test dynamic charts instantly.</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={roleChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} interval={0} />
-                    <YAxis stroke="#64748b" fontSize={9} tickLine={false} allowDecimals={false} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#020617', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }} 
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Bar name="Candidates Registered" dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-
-          {/* CHART 2: CANDIDATES DISTRIBUTIONS BY CITY */}
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5 text-left">
-                <h3 className="text-sm font-bold font-heading text-white">Geographic Coverage Distribution</h3>
-                <p className="text-[10px] text-slate-400">Active participants mapped by registered municipal city regions.</p>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] bg-sky-500/15 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/10 uppercase font-mono font-bold">
-                  Live Coordinates
-                </span>
-              </div>
-            </div>
-
-            <div className="h-64 w-full pt-2">
-              {volunteers.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-550 bg-slate-950/20 rounded-2xl border border-white/5 space-y-1.5">
-                  <MapPin className="w-8 h-8 text-slate-600 animate-pulse" />
-                  <p className="text-xs font-bold text-slate-400">No telemetry residency coordinates logged</p>
-                  <p className="text-[10px] text-slate-500 max-w-xs">Dynamic maps and coverage distribution bars will calculate upon intake entries.</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={cityChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} />
-                    <YAxis stroke="#64748b" fontSize={9} tickLine={false} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#020617', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Bar name="Circularity Workers" dataKey="count" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* WORKSPACE OPERATIONS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -416,113 +305,97 @@ export default function Admin() {
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed">
-              Mutate live platform indicators systematically. Use quick actions to add / subtract volume or submit precise manual overrides directly to the cloud backend.
+              Mutate live platform indicators systematically. Submit precise manual overrides directly to the cloud backend.
             </p>
 
             {/* TAB CONTAINER: QUICK ADJUST vs DIRECT MANUALLY ENTER */}
             <div className="space-y-6 pt-2 border-t border-white/5">
               
-              {/* SECTION A: DIRECT MANUAL OVERRIDE (Current and Target KGs) */}
-              <form onSubmit={handleSetBothIndicators} className="space-y-4 bg-slate-950/40 p-4 rounded-2xl border border-white/5">
-                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest block">Direct Manual Override</span>
+              {/* SECTION A: DIRECT MANUAL OVERRIDE (All 6 indicators) */}
+              <form onSubmit={handleSetAllIndicators} className="space-y-4 bg-slate-950/40 p-4 rounded-2xl border border-white/5">
+                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest block border-b border-white/5 pb-2">Direct Manual Overrides (Live DB Sync)</span>
                 
-                <div className="space-y-1.5 animate-fadeIn">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Manual Collected KGs *</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={currentValInput}
-                    onChange={(e) => setCurrentValInput(e.target.value)}
-                    className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-green-450 focus:outline-none text-xs font-mono transition-all"
-                    placeholder="7450"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5 animate-fadeIn">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Collected KGs</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={currentValInput}
+                      onChange={(e) => setCurrentValInput(e.target.value)}
+                      className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-green-400 focus:outline-none text-xs font-mono transition-all"
+                    />
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Manual Target Quota (KG) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={targetValInput}
-                    onChange={(e) => setTargetValInput(e.target.value)}
-                    className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-sky-400 focus:outline-none text-xs font-mono transition-all"
-                    placeholder="10000"
-                  />
+                  <div className="space-y-1.5 animate-fadeIn">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Target Quota (KG)</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={targetValInput}
+                      onChange={(e) => setTargetValInput(e.target.value)}
+                      className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-sky-450 focus:outline-none text-xs font-mono transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 animate-fadeIn">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Schools Collab</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={schoolsValInput}
+                      onChange={(e) => setSchoolsValInput(e.target.value)}
+                      className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-emerald-400 focus:outline-none text-xs font-mono transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 animate-fadeIn">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Events Hosted</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={eventsValInput}
+                      onChange={(e) => setEventsValInput(e.target.value)}
+                      className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-teal-400 focus:outline-none text-xs font-mono transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 animate-fadeIn">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Active Volunteers</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={volunteersValInput}
+                      onChange={(e) => setVolunteersValInput(e.target.value)}
+                      className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-purple-400 focus:outline-none text-xs font-mono transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 animate-fadeIn">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Communities Collab</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={communitiesValInput}
+                      onChange={(e) => setCommunitiesValInput(e.target.value)}
+                      className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-blue-400 focus:outline-none text-xs font-mono transition-all"
+                    />
+                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-green-500 text-slate-950 hover:bg-green-400 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-green-500/10 cursor-pointer flex items-center justify-center space-x-1.5"
+                  className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-slate-950 hover:brightness-110 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-green-500/10 cursor-pointer flex items-center justify-center space-x-1.5"
                 >
-                  
-                  <span>Update Live Indicators</span>
+                  <span>Sync Controls with DB</span>
                 </button>
               </form>
-
-              {/* SECTION B: QUICK INCREMENTAL PRESETS */}
-              <div className="space-y-4 pt-2 border-t border-white/5">
-                <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest block">Quick Delta Presets</span>
-                
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Adjustment Step Value (KG)</label>
-                  <input
-                    type="number"
-                    value={inputVal}
-                    onChange={(e) => setInputVal(e.target.value)}
-                    className="w-full bg-slate-950 text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-green-400 focus:outline-none text-xs font-mono transition-all"
-                    placeholder="500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    id="action_add_kg"
-                    onClick={() => handleAction('add')}
-                    className="py-2.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/15 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    id="action_reduce_kg"
-                    onClick={() => handleAction('reduce')}
-                    className="py-2.5 bg-red-400/10 hover:bg-red-400/20 text-red-500 border border-red-500/15 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                    <span>Deduct</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    id="action_set_kg"
-                    onClick={() => handleAction('set')}
-                    className="py-2.5 bg-sky-500/10 hover:bg-sky-500/25 text-sky-400 border border-sky-450/15 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer col-span-2"
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>Override Collected Only</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    id="action_reset_metrics"
-                    onClick={() => handleAction('reset')}
-                    className="py-2.5 bg-slate-950 hover:bg-slate-900 text-slate-400 border border-white/5 hover:border-white/10 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 col-span-2 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 font-bold" />
-                    <span>Restore Defaults</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-[10px] text-slate-400 leading-normal">
-                <span className="font-bold text-slate-300 block uppercase mb-1">Administrative Alert</span>
-                Updating metrics immediately recalculates milestone corridors, percentage badges, and recycling progress telemetry diagrams in real-time.
-              </div>
             </div>
           </div>
 
@@ -753,116 +626,6 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* INITIATIVES BLUEPRINTS LIST */}
-              <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Rocket className="w-5 h-5 text-sky-400" />
-                    <h3 className="text-sm font-bold font-heading text-white">Ecological Registered Initiatives</h3>
-                  </div>
-                  <span className="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-full font-bold">
-                    {initiatives.length} Active
-                  </span>
-                </div>
-
-                <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
-                  {isLoading ? (
-                    Array.from({ length: 3 }).map((_, id) => (
-                      <div key={id} className="p-4 bg-slate-900/30 rounded-xl border border-white/5 space-y-2 animate-pulse">
-                        <div className="flex items-center justify-between">
-                          <div className="h-4 bg-slate-800 rounded w-1/3" />
-                          <div className="h-3 bg-slate-850 rounded w-1/6" />
-                        </div>
-                        <div className="h-3 bg-slate-800 rounded w-1/2" />
-                        <div className="h-8 bg-slate-900/80 rounded w-full" />
-                      </div>
-                    ))
-                  ) : initiatives.length === 0 ? (
-                    <p className="text-slate-500 text-xs text-center py-12 font-medium">No initiative requests tracked yet.</p>
-                  ) : (
-                    initiatives.map((init) => {
-                      const isExpanded = expandedInitiativeId === init.id;
-                      return (
-                        <div
-                          key={init.id}
-                          onClick={() => setExpandedInitiativeId(isExpanded ? null : init.id)}
-                          className={`p-4 bg-slate-950/70 hover:bg-slate-950 rounded-2xl border transition-all cursor-pointer select-none ${
-                            isExpanded ? 'border-sky-500/30 shadow-[0_4px_20px_rgba(56,189,248,0.1)]' : 'border-white/5 hover:border-white/10'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs font-bold text-white font-heading">{init.name}</p>
-                              <div className="flex items-center space-x-2 mt-0.5 text-[10px] text-slate-400">
-                                <MapPin className="w-3 h-3 text-sky-400 flex-shrink-0" />
-                                <span>{init.city}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-[9px] text-slate-500 font-mono">{init.createdAt.split(',')[0]}</span>
-                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
-                            </div>
-                          </div>
-
-                          {/* Quick summary line (only show when collapsed) */}
-                          {!isExpanded && (
-                            <div className="mt-2 text-[10px] text-slate-400 line-clamp-1 flex items-center space-x-2">
-                              <span className="bg-sky-500/10 text-sky-400 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">
-                                Theme: {init.category}
-                              </span>
-                              <span className="text-slate-500">|</span>
-                              <span className="truncate italic">"{init.message || 'Ecological project pitch!'}"</span>
-                            </div>
-                          )}
-
-                          {/* Exhaustive expand details view */}
-                          {isExpanded && (
-                            <div className="mt-4 pt-3 border-t border-white/5 space-y-3 text-[11px] animate-fadeIn" onClick={(e) => e.stopPropagation()}>
-                              
-                              {/* Contact coordinates */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
-                                <a
-                                  href={`mailto:${init.email}`}
-                                  className="flex items-center space-x-2 p-2 bg-slate-900/60 rounded-xl hover:bg-slate-900 hover:text-white border border-white/5 transition-colors"
-                                >
-                                  <Mail className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
-                                  <span className="truncate font-mono text-[10px]">{init.email}</span>
-                                </a>
-                                
-                                <a
-                                  href={`tel:${init.phone}`}
-                                  className="flex items-center space-x-2 p-2 bg-slate-900/60 rounded-xl hover:bg-slate-900 hover:text-white border border-white/5 transition-colors"
-                                >
-                                  <Phone className="w-3.5 h-3.5 text-sky-300 flex-shrink-0" />
-                                  <span className="truncate font-mono text-[10px]">{init.phone}</span>
-                                </a>
-                              </div>
-
-                              {/* Focus Classification Category Tag */}
-                              <div className="space-y-1">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Initiative Focus Theme</span>
-                                <div className="flex items-center space-x-1.5 p-2 bg-sky-500/5 text-sky-400 border border-sky-500/10 rounded-xl font-bold">
-                                  <Briefcase className="w-3.5 h-3.5 flex-shrink-0" />
-                                  <span className="text-[10px]">{init.category}</span>
-                                </div>
-                              </div>
-
-                              {/* Initiative description message statements */}
-                              <div className="space-y-1">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Registration Strategy Proposal</span>
-                                <blockquote className="text-[10.5px] text-slate-300 leading-relaxed italic bg-slate-900/80 p-3 rounded-xl border border-white/5 relative">
-                                  "{init.message || 'We wish to adopt clean practices, distribute resource kits, launch structural waste recovery, and empower local green leadership in our communities.'}"
-                                </blockquote>
-                              </div>
-
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
 
             </div>
 
