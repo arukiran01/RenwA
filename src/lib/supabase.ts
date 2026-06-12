@@ -21,7 +21,7 @@ export const supabase = hasSupabaseConfig
 
 // Clean SQL setup script of the PostgreSQL database designed for Supabase SQL Editor
 export const SUPABASE_SETUP_SQL = `-- ----------------------------------------------------
--- RENEWA SUPABASE POSTGRESQL TABLES SCHEMAS
+-- RENEWEA SUPABASE POSTGRESQL TABLES SCHEMAS
 -- Paste and run this script in your Supabase SQL Editor!
 -- ----------------------------------------------------
 

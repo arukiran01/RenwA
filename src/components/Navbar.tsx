@@ -39,7 +39,7 @@ export default function Navbar() {
 
   return (
     <header
-      id="renewa_header"
+      id="renewea_header"
       className={`fixed top-0 left-0 right-0 z-50 h-[90px] transition-all duration-300 flex items-center ${
         scrolled
           ? 'bg-slate-900/80 backdrop-blur-xl border-b border-white/5 shadow-lg'
@@ -55,7 +55,7 @@ export default function Navbar() {
       <div className="w-full max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo Section */}
         <div
-          id="renewa_logo_group"
+          id="renewea_logo_group"
           className="flex items-center space-x-3 cursor-pointer group"
           onClick={() => navigateTo('home')}
         >
@@ -67,7 +67,7 @@ export default function Navbar() {
             <div className="absolute -inset-0.5 rounded-xl bg-green-500/30 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           </div>
           <span className="text-2xl font-extrabold tracking-tight text-white font-heading">
-            Renew<span className="text-green-500 transition-colors duration-300 group-hover:text-green-400">A</span>
+            Renewe<span className="text-green-500 transition-colors duration-300 group-hover:text-green-400">A</span>
           </span>
         </div>
 

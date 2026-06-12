@@ -1,0 +1,8 @@
+# www.robotstxt.org/
+# For ReneweA platform (renewa.live)
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://renewa.live/sitemap.xml

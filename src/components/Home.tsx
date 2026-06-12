@@ -164,6 +164,25 @@ function StringAnimatedCounter({ value }: { value: string }) {
   );
 }
 
+const fadeInUpVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12
+    }
+  }
+};
+
 export default function Home() {
   const { setActivePage } = useApp();
   const { metrics, volunteers, initiatives } = useDashboard();
@@ -378,7 +397,7 @@ export default function Home() {
               className="space-y-4"
             >
               <span className="text-xs font-black tracking-widest uppercase text-emerald-400 block tracking-widest leading-none">
-                RENEWA / SUSTAINABILITY UNIT
+                RENEWEA / SUSTAINABILITY UNIT
               </span>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-[1.08] text-white">
                 Transforming waste into a <span className="text-green-400 font-serif italic tracking-wide font-medium">sustainable</span> future
@@ -549,23 +568,26 @@ export default function Home() {
         id="impact-dashboard"
         className="py-24 px-6 max-w-7xl mx-auto relative z-10"
       >
-        <div className="text-center space-y-3 mb-16">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center space-y-3 mb-16"
+        >
+          <div
             className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20"
           >
             <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
             <span className="text-[11px] font-bold tracking-widest uppercase text-green-400">Live Telemetry Metrics</span>
-          </motion.div>
+          </div>
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight font-heading">
             Environmental Impact Dashboard
           </h2>
           <p className="text-slate-400 max-w-xl mx-auto text-sm md:text-base">
             Watch our active recovery process update in real-time as regional hubs recycle plastic, metals, glass and paper daily.
           </p>
-        </div>
+        </motion.div>
 
         {/* Dashboard Box (Glassmorphism Container) */}
         <motion.div
@@ -762,8 +784,8 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* SECTION 1: Why RenewA (Three Premium Cards) */}
-      <section id="why_renewa_section" className="py-24 bg-slate-950/20 border-t border-b border-white/5 relative overflow-hidden">
+      {/* SECTION 1: Why ReneweA (Three Premium Cards) */}
+      <section id="why_renewea_section" className="py-24 bg-slate-950/20 border-t border-b border-white/5 relative overflow-hidden">
         {/* Subtle decorative environmental background backdrop */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <img
@@ -779,21 +801,34 @@ export default function Home() {
           <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950 to-transparent" />
         </div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center space-y-4 mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center space-y-4 mb-20"
+          >
             <span className="text-xs font-bold tracking-widest uppercase text-green-500">Pillar Philosophy</span>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight font-heading">
-              Why RenewA exists
+              Why ReneweA exists
             </h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm md:text-base">
               The modern circular economy requires professional organization, reliable checkpoints, and high stakeholder alignment.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          >
             {valueCards.map((card, idx) => (
               <motion.div
                 key={idx}
                 id={`value_card_${idx}`}
+                variants={fadeInUpVariants}
                 whileHover={{ y: -10 }}
                 className={`group p-8 rounded-2xl bg-slate-950/80 border ${card.accent} backdrop-blur-md transition-all duration-300 flex flex-col justify-between h-[300px] relative overflow-hidden`}
               >
@@ -820,18 +855,25 @@ export default function Home() {
                 </div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
        {/* SECTION 2: Impact Numbers (Animated counters view) */}
        <section id="metrics_highlight" className="py-24 bg-slate-950 relative">
          <div className="max-w-7xl mx-auto px-6">
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+           <motion.div
+             variants={staggerContainer}
+             initial="hidden"
+             whileInView="visible"
+             viewport={{ once: true, margin: "-100px" }}
+             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
+           >
              {stats.map((stat, idx) => (
                <motion.div
                  key={idx}
                  id={`stat_card_row_${idx}`}
+                 variants={fadeInUpVariants}
                  whileHover={{ y: -10, scale: 1.05 }}
                  whileTap={{ scale: 0.98 }}
                  transition={{ type: 'spring', stiffness: 350, damping: 22 }}
@@ -870,7 +912,7 @@ export default function Home() {
                  </div>
                </motion.div>
              ))}
-           </div>
+           </motion.div>
          </div>
        </section>
 
@@ -891,7 +933,13 @@ export default function Home() {
           <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950 to-transparent" />
         </div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center space-y-4 mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center space-y-4 mb-20"
+          >
             <span className="text-xs font-bold tracking-widest uppercase text-sky-400">Step-By-Step Cycle</span>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight font-heading">
               Our Certified Recycling Journey
@@ -899,9 +947,15 @@ export default function Home() {
             <p className="text-slate-400 max-w-lg mx-auto text-sm md:text-base">
               Explore how materials we collect undergo state-of-the-art sorting and reprocessing to enter production loops again.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 relative">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 lg:grid-cols-5 gap-8 relative"
+          >
             
             {/* Horizontal timeline connector lines for desktop */}
             <div className="hidden lg:block absolute top-[44px] left-[10%] right-[10%] h-0.5 bg-slate-800 z-0 pointer-events-none"></div>
@@ -916,6 +970,7 @@ export default function Home() {
               <motion.div
                 key={idx}
                 id={`timeline_node_${idx}`}
+                variants={fadeInUpVariants}
                 whileHover={{ scale: 1.05 }}
                 className="relative z-10 bg-slate-950/85 p-6 rounded-2xl border border-white/5 text-center flex flex-col items-center space-y-4 shadow-xl"
               >
@@ -932,7 +987,7 @@ export default function Home() {
               </motion.div>
             ))}
 
-          </div>
+          </motion.div>
         </div>
       </section>
 

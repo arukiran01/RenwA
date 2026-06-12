@@ -6,7 +6,9 @@ import {
   Heart,
   Send,
   X,
-  Compass
+  Compass,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 const volunteerSchema = z.object({
@@ -37,6 +39,25 @@ export default function Volunteer() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [showPopup, setShowPopup] = useState(false);
   const [justSubmittedName, setJustSubmittedName] = useState('');
+
+  // Floating Toast notifications state
+  interface Toast {
+    id: string;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = (title: string, message: string, type: 'success' | 'error' = 'success') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, title, message, type }]);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  };
 
   const validateField = (name: string, value: string) => {
     try {
@@ -104,6 +125,11 @@ export default function Volunteer() {
         }
       });
       setFormErrors(errors);
+      addToast(
+        "Validation Failed",
+        "Please review the highlighted fields in the application.",
+        "error"
+      );
       return;
     }
 
@@ -122,6 +148,12 @@ export default function Volunteer() {
       setJustSubmittedName(formData.name);
       setShowPopup(true);
 
+      addToast(
+        "Application Received",
+        `Fantastic, ${formData.name}! Your details have been submitted.`,
+        "success"
+      );
+
       // Reset form controls
       setFormData({
         name: '',
@@ -137,6 +169,11 @@ export default function Volunteer() {
       setTouched({});
     } catch (err) {
       console.error("Volunteer application error: ", err);
+      addToast(
+        "Submission Error",
+        "Failed to send application. Please try again.",
+        "error"
+      );
     }
   };
 
@@ -401,6 +438,50 @@ export default function Volunteer() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* FLOATING TOAST NOTIFICATION STACK */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 100, scale: 0.9, transition: { duration: 0.2 } }}
+              className={`p-4 rounded-2xl border backdrop-blur-md shadow-2xl flex items-start gap-3 pointer-events-auto relative overflow-hidden ${
+                t.type === 'success'
+                  ? 'bg-slate-900/95 border-emerald-500/20 text-white'
+                  : 'bg-slate-900/95 border-red-500/20 text-white'
+              }`}
+              layout
+            >
+              <div className={`absolute top-0 left-0 right-0 h-[2px] ${
+                t.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+              }`} />
+
+              <div className="mt-0.5 shrink-0">
+                {t.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+
+              <div className="flex-1 text-left space-y-1">
+                <h4 className="text-xs font-bold uppercase tracking-wider">{t.title}</h4>
+                <p className="text-[11px] text-slate-400 font-sans leading-relaxed">{t.message}</p>
+              </div>
+
+              <button
+                onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
+                className="text-slate-500 hover:text-white p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
     </div>
   );

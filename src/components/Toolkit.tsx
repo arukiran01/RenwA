@@ -35,7 +35,7 @@ export default function Toolkit() {
     {
       step: '04',
       title: 'Partner With Recyclers',
-      desc: 'Connect your collection volumes to verified municipal recyclers, waste management processors, or RenewA collection hubs to assure closed-loop processing.',
+      desc: 'Connect your collection volumes to verified municipal recyclers, waste management processors, or ReneweA collection hubs to assure closed-loop processing.',
       icon: Briefcase,
       badgeClr: 'bg-indigo-500/10 text-indigo-400'
     },

@@ -11,7 +11,7 @@ const loginSchema = z.object({
 
 export default function Login() {
   const { loginAdmin, loginWithGoogle, setActivePage, isAuthenticated } = useApp();
-  const [email, setEmail] = useState('admin@renewa.org');
+  const [email, setEmail] = useState('admin@renewea.org');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ export default function Login() {
       if (success) {
         setActivePage('admin');
       } else {
-        setError('Invalid entry credentials. (Hint: use "admin" or "renewa2026")');
+        setError('Invalid entry credentials. (Hint: use "admin" or "renewea2026")');
       }
     } catch (err: any) {
       setError(err?.message || 'Login failed.');
@@ -102,7 +102,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="operator@renewa.com"
+                placeholder="operator@renewea.com"
                 className="w-full bg-slate-950 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 focus:border-green-400 focus:outline-none text-sm transition-all font-medium"
               />
             </div>
@@ -113,7 +113,7 @@ export default function Login() {
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Passcode</label>
               <button
                 type="button"
-                onClick={() => alert('Development Bypass active: Use key "admin" or "renewa2026" to login.')}
+                onClick={() => alert('Development Bypass active: Use key "admin" or "renewea2026" to login.')}
                 className="text-[10px] text-green-400 hover:text-green-300 font-semibold cursor-pointer"
               >
                 Forgot Password?

@@ -291,7 +291,7 @@ export default function Methods() {
           <div className="pt-2">
             <button
               onClick={() => {
-                const el = document.getElementById('renewa_header');
+                const el = document.getElementById('renewea_header');
                 el?.scrollIntoView({ behavior: 'smooth' });
                 // Switch to toolkit tab
                 setTimeout(() => {

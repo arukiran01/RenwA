@@ -116,22 +116,22 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [metrics, setMetrics] = useState<WasteMetrics>(() => {
-    const saved = localStorage.getItem('renewa_metrics');
+    const saved = localStorage.getItem('renewea_metrics');
     return saved ? JSON.parse(saved) : DEFAULT_METRICS;
   });
   
   const [volunteers, setVolunteers] = useState<VolunteerApplication[]>(() => {
-    const saved = localStorage.getItem('renewa_volunteers');
+    const saved = localStorage.getItem('renewea_volunteers');
     return saved ? JSON.parse(saved) : DEFAULT_VOLUNTEERS;
   });
 
   const [initiatives, setInitiatives] = useState<InitiativeApplication[]>(() => {
-    const saved = localStorage.getItem('renewa_initiatives');
+    const saved = localStorage.getItem('renewea_initiatives');
     return saved ? JSON.parse(saved) : DEFAULT_INITIATIVES;
   });
 
   const [logs, setLogs] = useState<ActivityLog[]>(() => {
-    const saved = localStorage.getItem('renewa_logs');
+    const saved = localStorage.getItem('renewea_logs');
     return saved ? JSON.parse(saved) : DEFAULT_LOGS;
   });
 
@@ -196,7 +196,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!hasSupabaseConfig || !supabase) return;
 
     // Guard on admin authentication locally to avoid wiping mock lists
-    const isLocalAuth = localStorage.getItem('renewa_admin_auth') === 'true';
+    const isLocalAuth = localStorage.getItem('renewea_admin_auth') === 'true';
     if (!isLocalAuth) return;
 
     try {
@@ -237,7 +237,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!hasSupabaseConfig || !supabase) return;
 
     // Guard on admin authentication locally to avoid wiping mock lists
-    const isLocalAuth = localStorage.getItem('renewa_admin_auth') === 'true';
+    const isLocalAuth = localStorage.getItem('renewea_admin_auth') === 'true';
     if (!isLocalAuth) return;
 
     try {
@@ -463,19 +463,19 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Sync state changes local persistence block as fallback
   useEffect(() => {
-    localStorage.setItem('renewa_metrics', JSON.stringify(metrics));
+    localStorage.setItem('renewea_metrics', JSON.stringify(metrics));
   }, [metrics]);
 
   useEffect(() => {
-    localStorage.setItem('renewa_volunteers', JSON.stringify(volunteers));
+    localStorage.setItem('renewea_volunteers', JSON.stringify(volunteers));
   }, [volunteers]);
 
   useEffect(() => {
-    localStorage.setItem('renewa_initiatives', JSON.stringify(initiatives));
+    localStorage.setItem('renewea_initiatives', JSON.stringify(initiatives));
   }, [initiatives]);
 
   useEffect(() => {
-    localStorage.setItem('renewa_logs', JSON.stringify(logs));
+    localStorage.setItem('renewea_logs', JSON.stringify(logs));
   }, [logs]);
 
   const submitVolunteer = async (app: Omit<VolunteerApplication, 'id' | 'createdAt'>) => {
@@ -898,16 +898,16 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     }
 
-    localStorage.setItem('renewa_volunteers', JSON.stringify(DEFAULT_VOLUNTEERS));
+    localStorage.setItem('renewea_volunteers', JSON.stringify(DEFAULT_VOLUNTEERS));
     setVolunteers(DEFAULT_VOLUNTEERS);
 
-    localStorage.setItem('renewa_initiatives', JSON.stringify(DEFAULT_INITIATIVES));
+    localStorage.setItem('renewea_initiatives', JSON.stringify(DEFAULT_INITIATIVES));
     setInitiatives(DEFAULT_INITIATIVES);
 
-    localStorage.setItem('renewa_logs', JSON.stringify(DEFAULT_LOGS));
+    localStorage.setItem('renewea_logs', JSON.stringify(DEFAULT_LOGS));
     setLogs(DEFAULT_LOGS);
 
-    localStorage.setItem('renewa_metrics', JSON.stringify(DEFAULT_METRICS));
+    localStorage.setItem('renewea_metrics', JSON.stringify(DEFAULT_METRICS));
     setMetrics(DEFAULT_METRICS);
 
     addToast('Standard telemetry mock environment successfully seeded!', 'success');

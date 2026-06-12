@@ -23,20 +23,55 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activePage, setActivePage] = useState<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'>('home');
+  const [activePage, setActivePageState] = useState<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get('page');
+    const validPages: Array<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'> = ['home', 'methods', 'toolkit', 'volunteer', 'login', 'admin'];
+    if (p && validPages.includes(p as any)) {
+      return p as any;
+    }
+    return 'home';
+  });
+
+  const setActivePage = (page: 'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin') => {
+    setActivePageState(page);
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', page);
+    window.history.pushState({ page }, '', url.toString());
+  };
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.page) {
+        setActivePageState(event.state.page);
+      } else {
+        const params = new URLSearchParams(window.location.search);
+        const p = params.get('page');
+        const validPages: Array<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'> = ['home', 'methods', 'toolkit', 'volunteer', 'login', 'admin'];
+        if (p && validPages.includes(p as any)) {
+          setActivePageState(p as any);
+        } else {
+          setActivePageState('home');
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('renewa_admin_auth') === 'true';
+    return localStorage.getItem('renewea_admin_auth') === 'true';
   });
 
   const loginAdmin = async (password: string): Promise<boolean> => {
-    const authSql = `SELECT * FROM auth.users WHERE email = 'admin@renewa.org' AND secret_passcode = $1;`;
+    const authSql = `SELECT * FROM auth.users WHERE email = 'admin@renewea.org' AND secret_passcode = $1;`;
     logSqlQuery(authSql, [password]);
 
-    if (password === 'admin' || password === 'renewa2026') {
+    if (password === 'admin' || password === 'renewea2026') {
       if (hasSupabaseConfig && supabase) {
         try {
           const credentials = {
-            email: 'admin@renewa.org',
+            email: 'admin@renewea.org',
             password: password === 'admin' ? 'adminPasscode123' : password
           };
           const { error } = await supabase.auth.signInWithPassword(credentials);
@@ -48,17 +83,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (signUpError) {
               console.warn('[SUPABASE AUTO REGISTER FAILED] User could not be created/verified:', signUpError.message);
             } else {
-              console.log('[SUPABASE AUTO REGISTER SUCCESS] Created admin@renewa.org in Auth.');
+              console.log('[SUPABASE AUTO REGISTER SUCCESS] Created admin@renewea.org in Auth.');
             }
           } else {
-            console.log('[SUPABASE AUTH SUCCESS] Logged in as admin@renewa.org.');
+            console.log('[SUPABASE AUTH SUCCESS] Logged in as admin@renewea.org.');
           }
         } catch (e) {
           console.warn('[SUPABASE AUTH WARNING] Supabase database auth fallback to Local state:', e);
         }
       }
       setIsAuthenticated(true);
-      localStorage.setItem('renewa_admin_auth', 'true');
+      localStorage.setItem('renewea_admin_auth', 'true');
       return true;
     }
     return false;
@@ -78,23 +113,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         if (error) throw error;
         setIsAuthenticated(true);
-        localStorage.setItem('renewa_admin_auth', 'true');
+        localStorage.setItem('renewea_admin_auth', 'true');
         return true;
       } catch (err) {
         console.error('[SUPABASE OAUTH ERROR] Google login failure, falling back to local simulation:', err);
         setIsAuthenticated(true);
-        localStorage.setItem('renewa_admin_auth', 'true');
+        localStorage.setItem('renewea_admin_auth', 'true');
         return true;
       }
     } else {
       setIsAuthenticated(true);
-      localStorage.setItem('renewa_admin_auth', 'true');
+      localStorage.setItem('renewea_admin_auth', 'true');
       return true;
     }
   };
 
   const logoutAdmin = async () => {
-    const signoutSql = `UPDATE auth.sessions SET active = FALSE WHERE user_id = 'admin@renewa.org';`;
+    const signoutSql = `UPDATE auth.sessions SET active = FALSE WHERE user_id = 'admin@renewea.org';`;
     logSqlQuery(signoutSql);
 
     if (hasSupabaseConfig && supabase) {
@@ -105,7 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     setIsAuthenticated(false);
-    localStorage.removeItem('renewa_admin_auth');
+    localStorage.removeItem('renewea_admin_auth');
     setActivePage('home');
   };
 

@@ -1,7 +1,7 @@
 -- -----------------------------------------------------------------------------
--- RENEWA SUPABASE SYSTEM SCHEMA & SECURITIES RULES
+-- RENEWEA SUPABASE SYSTEM SCHEMA & SECURITIES RULES
 -- -----------------------------------------------------------------------------
--- This SQL script sets up the Postgres database for the Renewa platform.
+-- This SQL script sets up the Postgres database for the ReneweA platform.
 -- It configures tables for volunteers, initiatives, impact metrics, and logs,
 -- along with secure Row Level Security (RLS) policies.
 -- -----------------------------------------------------------------------------
