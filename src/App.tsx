@@ -73,8 +73,184 @@ function AppContent() {
     const ogDesc = document.querySelector('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute('content', currentDesc);
 
+    // Advanced Page-Specific Structured Data Schema (JSON-LD) Injection for AEO, GEO, and SEO Excellence
+    const schemas: Record<string, object> = {
+      home: {
+        "@context": "https://schema.org",
+        "@type": "EnvironmentalAgency",
+        "name": "ReneweA",
+        "url": "https://renewa.live",
+        "logo": "https://renewa.live/favicon.svg",
+        "description": "India's premier environmental telemetry and waste recovery platform tracking live metrics across Hyderabad, Bangalore, Mumbai, Chennai, and Delhi NCR.",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Deccan Circular Hub, Madhapur",
+          "addressLocality": "Hyderabad",
+          "addressRegion": "Telangana",
+          "postalCode": "500081",
+          "addressCountry": "IN"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "17.4483",
+          "longitude": "78.3741"
+        },
+        "telephone": "+91 40 2345 6789",
+        "knowsAbout": ["Circular Economy", "Environmental Telemetry", "E-waste Logistics", "Recycling Methods", "Waste Sorting"],
+        "sameAs": [
+          "https://github.com/arukiranreddy",
+          "https://renewa.live"
+        ]
+      },
+      about: {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "mainEntity": {
+          "@type": "Organization",
+          "name": "ReneweA",
+          "founder": [
+            {
+              "@type": "Person",
+              "name": "Kiran Reddy",
+              "jobTitle": "Founder & Chief Sustainability Officer"
+            },
+            {
+              "@type": "Person",
+              "name": "Dr. Ananya Sen",
+              "jobTitle": "Head of Materials & Circular Science"
+            },
+            {
+              "@type": "Person",
+              "name": "Aditya Sharma",
+              "jobTitle": "Director of Regional Logistics & Operations"
+            }
+          ],
+          "foundingDate": "2026-01-01",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Hyderabad",
+            "addressRegion": "Telangana",
+            "addressCountry": "IN"
+          }
+        }
+      },
+      methods: {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Certified Material Reprocessing & Circular Sorting",
+        "provider": {
+          "@type": "Organization",
+          "name": "ReneweA"
+        },
+        "serviceType": "Recycling and Waste Valorization",
+        "areaServed": {
+          "@type": "Country",
+          "name": "India"
+        },
+        "description": "State-of-the-art sorting and reprocessing methods for Plastic (PET, HDPE), Metal (Aluminium, Steel), Glass, and Paper with complete telemetry and transparency.",
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Recycling Methods Catalog",
+          "itemListElement": [
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "Plastic Flaking & Thermal Extrusion",
+                "description": "Sorting and processing polymers into food-grade circular flakes."
+              }
+            },
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "Hydropulping & Metal De-tinning",
+                "description": "Paper fibre recovery and electrolytic metal recovery."
+              }
+            }
+          ]
+        }
+      },
+      toolkit: {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Circularity & Waste Sorting Toolkit",
+        "description": "Essential instructions, partner agreements, and setup procedures for starting community circular sorting hubs and dry waste aggregation centers in Indian cities.",
+        "author": {
+          "@type": "Organization",
+          "name": "ReneweA"
+        },
+        "inLanguage": "en",
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Waste Sorting"
+          },
+          {
+            "@type": "Thing",
+            "name": "Circular Economy Setup"
+          },
+          {
+            "@type": "Thing",
+            "name": "Environmental Auditing"
+          }
+        ]
+      },
+      volunteer: {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": "ReneweA Citizen Mobilization & Waste Stewardship Hubs",
+        "description": "Apply to join ReneweA's active recovery network. Help coordinate coastal cleanups, school eco-seminars, and regional sorting drives in any major Indian city.",
+        "startDate": "2026-07-05T09:00:00+05:30",
+        "eventAttendanceMode": "https://schema.org/MixedEventAttendanceMode",
+        "eventStatus": "https://schema.org/EventScheduled",
+        "location": {
+          "@type": "Place",
+          "name": "Multiple Cities (Hyderabad, Bangalore, Mumbai, Chennai, Delhi NCR)",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Hyderabad, Bangalore, Mumbai, Chennai",
+            "addressCountry": "IN"
+          }
+        },
+        "organizer": {
+          "@type": "Organization",
+          "name": "ReneweA"
+        }
+      },
+      login: {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Authorized Telemetry Coordinator Panel",
+        "description": "Secure access point for central hubs, logistical coordinators, and verified environmental field agents to push telemetry metrics."
+      },
+      admin: {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "ReneweA Central Command Telemetry Console",
+        "description": "Protected administrative and synchronization desk to manage volunteer certifications and approve logistical collection weights."
+      }
+    };
+
+    const currentSchema = schemas[activePage] || schemas.home;
+
+    // Remove any existing dynamic schema tag to avoid duplicates, then append new
+    let schemaScript = document.getElementById('dynamic-seo-schema');
+    if (schemaScript) {
+      schemaScript.remove();
+    }
+    schemaScript = document.createElement('script');
+    schemaScript.setAttribute('id', 'dynamic-seo-schema');
+    schemaScript.setAttribute('type', 'application/ld+json');
+    schemaScript.textContent = JSON.stringify(currentSchema, null, 2);
+    document.head.appendChild(schemaScript);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      const scriptToRemove = document.getElementById('dynamic-seo-schema');
+      if (scriptToRemove) {
+        scriptToRemove.remove();
+      }
     };
   }, [activePage]);
 
