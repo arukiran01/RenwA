@@ -27,6 +27,7 @@ export default function Navbar() {
 
   const navItems = [
     { id: 'home', label: 'Home' },
+    { id: 'about', label: 'About Us' },
     { id: 'methods', label: 'Methods of Recycling' },
     { id: 'toolkit', label: 'Toolkit' },
     { id: 'volunteer', label: 'Volunteer Recruitment' }

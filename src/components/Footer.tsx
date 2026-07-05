@@ -1,11 +1,11 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, PageType } from '../context/AppContext';
 import { Leaf, Phone, Mail, MapPin, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
   const { setActivePage } = useApp();
 
-  const navigateTo = (page: 'home' | 'methods' | 'toolkit' | 'volunteer' | 'login') => {
+  const navigateTo = (page: PageType) => {
     setActivePage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -52,15 +52,23 @@ export default function Footer() {
               <li>
                 <button
                   onClick={() => navigateTo('home')}
-                  className="hover:text-green-400 transition-colors cursor-pointer"
+                  className="hover:text-green-400 transition-colors cursor-pointer text-left"
                 >
                   Home Dashboard
                 </button>
               </li>
               <li>
                 <button
+                  onClick={() => navigateTo('about')}
+                  className="hover:text-green-400 transition-colors cursor-pointer text-left"
+                >
+                  About Us
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => navigateTo('methods')}
-                  className="hover:text-green-400 transition-colors cursor-pointer"
+                  className="hover:text-green-400 transition-colors cursor-pointer text-left"
                 >
                   Methods of Recycling
                 </button>
@@ -68,7 +76,7 @@ export default function Footer() {
               <li>
                 <button
                   onClick={() => navigateTo('toolkit')}
-                  className="hover:text-green-400 transition-colors cursor-pointer"
+                  className="hover:text-green-400 transition-colors cursor-pointer text-left"
                 >
                   Toolkit Steps
                 </button>
@@ -76,7 +84,7 @@ export default function Footer() {
               <li>
                 <button
                   onClick={() => navigateTo('volunteer')}
-                  className="hover:text-green-400 transition-colors cursor-pointer"
+                  className="hover:text-green-400 transition-colors cursor-pointer text-left"
                 >
                   Volunteer Recruitment
                 </button>
@@ -88,6 +96,14 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-xs font-black uppercase tracking-widest text-white font-heading">Solutions</h4>
             <ul className="space-y-2 text-xs">
+              <li>
+                <button
+                  onClick={() => navigateTo('about')}
+                  className="hover:text-green-400 transition-colors cursor-pointer text-left"
+                >
+                  Pioneering Circularity Story
+                </button>
+              </li>
               <li>
                 <button
                   onClick={() => navigateTo('methods')}
@@ -129,17 +145,17 @@ export default function Footer() {
             <ul className="space-y-3 text-xs">
               <li className="flex items-center space-x-2.5">
                 <Phone className="w-4 h-4 text-green-400" />
-                <span>+1 (800) 555-RENEWEA</span>
+                <span>+91 40 2345 6789</span>
               </li>
               <li className="flex items-center space-x-2.5">
                 <Mail className="w-4 h-4 text-green-400" />
-                <span>earth@renewea-sustain.org</span>
+                <span>info@renewa.live</span>
               </li>
               <li className="flex items-start space-x-2.5">
                 <MapPin className="w-4 h-4 text-green-400 mt-0.5" />
                 <span className="leading-normal">
-                  Sustained Hub Quarter Block 12A,<br />
-                  San Francisco, CA 94103
+                  Deccan Circular Hub, Madhapur,<br />
+                  Hyderabad, Telangana - 500081, India
                 </span>
               </li>
             </ul>

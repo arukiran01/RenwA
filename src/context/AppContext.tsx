@@ -11,10 +11,12 @@ function logSqlQuery(sql: string, params?: any[]) {
   console.groupEnd();
 }
 
+export type PageType = 'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin' | 'about';
+
 interface AppContextType {
-  activePage: 'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin';
+  activePage: PageType;
   isAuthenticated: boolean;
-  setActivePage: (page: 'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin') => void;
+  setActivePage: (page: PageType) => void;
   loginAdmin: (password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logoutAdmin: () => Promise<void>;
@@ -23,20 +25,25 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activePage, setActivePageState] = useState<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'>(() => {
+  const [activePage, setActivePageState] = useState<PageType>(() => {
+    const path = window.location.pathname.replace(/^\/+/g, '').toLowerCase();
+    const validPages: PageType[] = ['home', 'methods', 'toolkit', 'volunteer', 'login', 'admin', 'about'];
+    if (path && validPages.includes(path as PageType)) {
+      return path as PageType;
+    }
     const params = new URLSearchParams(window.location.search);
     const p = params.get('page');
-    const validPages: Array<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'> = ['home', 'methods', 'toolkit', 'volunteer', 'login', 'admin'];
-    if (p && validPages.includes(p as any)) {
-      return p as any;
+    if (p && validPages.includes(p as PageType)) {
+      return p as PageType;
     }
     return 'home';
   });
 
-  const setActivePage = (page: 'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin') => {
+  const setActivePage = (page: PageType) => {
     setActivePageState(page);
     const url = new URL(window.location.href);
-    url.searchParams.set('page', page);
+    url.pathname = `/${page}`;
+    url.searchParams.delete('page');
     window.history.pushState({ page }, '', url.toString());
   };
 
@@ -45,11 +52,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (event.state && event.state.page) {
         setActivePageState(event.state.page);
       } else {
-        const params = new URLSearchParams(window.location.search);
-        const p = params.get('page');
-        const validPages: Array<'home' | 'methods' | 'toolkit' | 'volunteer' | 'login' | 'admin'> = ['home', 'methods', 'toolkit', 'volunteer', 'login', 'admin'];
-        if (p && validPages.includes(p as any)) {
-          setActivePageState(p as any);
+        const path = window.location.pathname.replace(/^\/+/g, '').toLowerCase();
+        const validPages: PageType[] = ['home', 'methods', 'toolkit', 'volunteer', 'login', 'admin', 'about'];
+        if (path && validPages.includes(path as PageType)) {
+          setActivePageState(path as PageType);
         } else {
           setActivePageState('home');
         }

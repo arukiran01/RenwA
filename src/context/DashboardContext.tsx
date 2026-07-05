@@ -44,55 +44,91 @@ const DEFAULT_METRICS: WasteMetrics = {
 const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
   {
     id: 'vol-1',
-    name: 'Sarah Jenkins',
-    email: 'sarah.j@sustain.org',
-    phone: '+1 (555) 124-5869',
-    city: 'San Francisco',
-    skills: 'Community Organizing, Public Speaking',
+    name: 'Aarav Sharma',
+    email: 'aarav.sharma@renewea.live',
+    phone: '+91 98450 12345',
+    city: 'Hyderabad, Telangana',
+    skills: 'Community Organizing, Public Speaking, Telugu, Hindi',
     availability: 'Part-time (Weekends)',
-    message: "Passionate about structural plastic reductions. Let's co-create localized collection events!",
+    message: "Passionate about structural plastic reductions in Gachibowli. Let's co-create localized collection events!",
     appliedRole: 'Coastal Cleanup Crew',
     status: 'Pre-qualified',
     createdAt: new Date(Date.now() - 4 * 3600000).toLocaleString()
   },
   {
     id: 'vol-2',
-    name: 'Michael Chen',
-    email: 'm.chen@greenbyte.io',
-    phone: '+1 (555) 987-6543',
-    city: 'Seattle',
-    skills: 'Technical logistics, Heavy Lifting, Driving',
+    name: 'Diya Patel',
+    email: 'diya.p@greenbyte.in',
+    phone: '+91 80555 98765',
+    city: 'Bangalore, Karnataka',
+    skills: 'Technical logistics, Heavy Lifting, Driving, Kannada',
     availability: 'Full-time (Weekdays)',
-    message: "Background in inventory tracking. Available for commercial sorting runs and waste weight validation.",
+    message: "Background in inventory tracking. Available for commercial sorting runs in Whitefield and waste weight validation.",
     appliedRole: 'E-waste Logistics Driver',
     status: 'Approved',
     createdAt: new Date(Date.now() - 17 * 3600000).toLocaleString()
   },
   {
     id: 'vol-3',
-    name: 'Emma Rodriguez',
-    email: 'emma.learning@edu-earth.net',
-    phone: '+1 (555) 432-1098',
-    city: 'Portland',
-    skills: 'Curriculum Design, Botany, Child Education',
+    name: 'Rohit Mehta',
+    email: 'rohit.mehta@edu-earth.net',
+    phone: '+91 91234 56789',
+    city: 'Mumbai, Maharashtra',
+    skills: 'Curriculum Design, Botany, Child Education, Marathi',
     availability: 'On-Call',
-    message: 'Excited about expanding local circular sorting in primary schools. Ready to host educational seminars.',
+    message: 'Excited about expanding local circular sorting in primary schools across Mumbai. Ready to host educational seminars.',
     appliedRole: 'School Eco-Teacher',
     status: 'Pending Review',
     createdAt: new Date(Date.now() - 36 * 3600000).toLocaleString()
+  },
+  {
+    id: 'vol-4',
+    name: 'Priyanka Rao',
+    email: 'priyanka.rao@circular.org.in',
+    phone: '+91 94440 54321',
+    city: 'Chennai, Tamil Nadu',
+    skills: 'Marine Ecology, Beach Cleanup Logistics, Tamil',
+    availability: 'Part-time (Weekends)',
+    message: 'Eager to organize beach cleanups at Marina Beach and implement circular plastic collection schemes along the coastline.',
+    appliedRole: 'Coastal Cleanup Crew',
+    status: 'Approved',
+    createdAt: new Date(Date.now() - 48 * 3600000).toLocaleString()
+  },
+  {
+    id: 'vol-5',
+    name: 'Kabir Singh',
+    email: 'kabir.s@sustainability.in',
+    phone: '+91 98110 99887',
+    city: 'Delhi NCR, Delhi',
+    skills: 'Government Liaison, Environmental Law, Hindi',
+    availability: 'On-Call',
+    message: 'Interested in working with municipal bodies to scale zero-waste models in residential apartments.',
+    appliedRole: 'General Volunteer',
+    status: 'Pre-qualified',
+    createdAt: new Date(Date.now() - 60 * 3600000).toLocaleString()
   }
 ];
 
 const DEFAULT_INITIATIVES: InitiativeApplication[] = [
   {
     id: 'init-1',
-    name: 'Greenwood Sorting Station',
-    email: 'contact@greenwood-community.org',
-    phone: '+1 (555) 234-5678',
-    city: 'San Francisco',
+    name: 'Deccan Circular Hub',
+    email: 'contact@deccan-community.org',
+    phone: '+91 40234 56789',
+    city: 'Hyderabad, Telangana',
     category: 'Community Workspace Cleanup',
-    message: 'Applying for waste sorting templates to convert an unused courtyard into a high-throughput community recycling station.',
+    message: 'Applying for waste sorting templates to convert an unused courtyard in Madhapur into a high-throughput community recycling station.',
     createdAt: new Date(Date.now() - 8 * 3600000).toLocaleString()
+  },
+  {
+    id: 'init-2',
+    name: 'Indiranagar Solid Waste Management Unit',
+    email: 'contact@indiranagar-swm.org',
+    phone: '+91 80456 78901',
+    city: 'Bangalore, Karnataka',
+    category: 'Local Eco Hub',
+    message: 'Establishing a localized e-waste and dry-waste collection node to serve community schools and households.',
+    createdAt: new Date(Date.now() - 24 * 3600000).toLocaleString()
   }
 ];
 
@@ -100,13 +136,19 @@ const DEFAULT_LOGS: ActivityLog[] = [
   {
     id: 'log-1',
     type: 'new_initiative',
-    description: 'New Initiative "Greenwood Sorting Station" registered via Circularity Toolkit.',
+    description: 'New Initiative "Deccan Circular Hub" registered in Hyderabad, Telangana via Circularity Toolkit.',
     timestamp: '12:00:00 PM'
   },
   {
     id: 'log-2',
     type: 'new_volunteer',
-    description: 'Emma Rodriguez registered to become an active School Eco-Teacher.',
+    description: 'Aarav Sharma registered to become an active Coastal Cleanup Crew in Hyderabad.',
+    timestamp: '01:10:15 PM'
+  },
+  {
+    id: 'log-3',
+    type: 'new_volunteer',
+    description: 'Diya Patel registered as an Approved E-waste Logistics Driver in Bangalore, Karnataka.',
     timestamp: '02:15:30 PM'
   }
 ];

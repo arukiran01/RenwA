@@ -13,6 +13,7 @@ import Toolkit from './components/Toolkit';
 import Volunteer from './components/Volunteer';
 import Login from './components/Login';
 import Admin from './components/Admin';
+import About from './components/About';
 import Footer from './components/Footer';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -80,6 +81,7 @@ function AppContent() {
             {activePage === 'volunteer' && <Volunteer />}
             {activePage === 'login' && <Login />}
             {activePage === 'admin' && <Admin />}
+            {activePage === 'about' && <About />}
           </motion.div>
         </AnimatePresence>
       </main>
